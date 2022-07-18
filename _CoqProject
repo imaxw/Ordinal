@@ -1,0 +1,7 @@
+-Q ./theories/ Ordinal
+
+theories/CommonHeader.v
+theories/Notations.v
+theories/WellFounded.v
+theories/Base.v
+theories/Finite.v
