@@ -1,7 +1,7 @@
 From Coq.Relations Require Import Relation_Definitions.
 From Coq.Program Require Import Basics.
 
-From Coq.Classes Require Export RelationClasses Morphisms SetoidClass.
+From Coq.Classes Require Export SetoidClass.
 
 Generalizable All Variables.
 
@@ -83,34 +83,7 @@ Section Covariance_Contravariance.
       apply covariance in rel.
       apply (asymmetry rel rel').
     Qed.
-    
-
 
   End StrictOrders.
-  
-  Lemma strict_covariant_quasi_injectivity `(StrictCovariant f):
-      forall x x': A, f x == f x' -> ~(x < x').
-  Proof.
-    intros x x' E L.
-    apply (proper_prf   f) in L.
-    contradict L. now apply setoid_irreflexivity.
-  Qed.
-  
-  Corollary strict_covariant_quasi_injectivity_2 `(StrictCovariant f):
-      forall x x': A, f x == f x' -> ~(x' < x).
-  Proof.
-    intros x x' E. setoid_symmetry in E.
-    exact (strict_covariant_quasi_injectivity H3 _ _ E).
-  Qed.
 
-  Definition strict_downward_closed `(StrictCovariant f) :=
-    forall y: B,
-      (exists x: A, f x == y) ->
-        forall y': B, y' < y -> exists x': A, f x' == y'.
-  
-  Definition strict_upward_closed `(StrictCovariant f) :=
-    forall y: B,
-      (exists x: A, f x == y) ->
-        forall y': B, y < y' -> exists x': A, f x' == y'.
-
-End Covariance_Contravariance.
+  End Covariance_Contravariance.

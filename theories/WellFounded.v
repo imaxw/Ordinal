@@ -1,9 +1,10 @@
 Require Import
   Coq.Relations.Relation_Definitions
+  Coq.Relations.Relation_Operators
   Coq.Classes.RelationClasses
   Coq.Logic.StrictProp.
 
-Generalizable Variables A B P Q R equal domain.
+Generalizable Variables A B P Q R equal.
 
 Set Implicit Arguments.
 
@@ -11,21 +12,32 @@ Set Implicit Arguments.
 Class WellFounded `(R: relation A) :=
   wf: well_founded R.
 
-Class WeaklyExtensional `(equivalence: Equivalence domain equal)
-                   (R: relation domain) :=
-  weak_extensionality: forall x y, (R x y <-> R y x) -> equal x y.
+Class WeaklyExtensional `(equivalence: Equivalence A equal)
+                   (R: relation A) :=
+  weak_extensionality: forall x y, (forall t, R t x <-> R t y) -> equal x y.
     
-Arguments WeaklyExtensional {domain} equal {equivalence} R.
+Arguments WeaklyExtensional {A} equal {equivalence} R.
 
-Class WellOrder `(equivalence: Equivalence domain equal)
-                 (R: relation domain) :=
+Class WellOrder `(equivalence: Equivalence A equal)
+                 (R: relation A) :=
 {
   WellOrder_WellFounded :> WellFounded R;
   WellOrder_Transitive :> Transitive R;
   WellOrder_WeakExtensional :> WeaklyExtensional equal R
 }.
 
-Arguments WellOrder {domain} equal {equivalence} R.
+Arguments WellOrder {A} equal {equivalence} R.
+
+(** Every well-founded relation is irreflexive. We give
+    this instance low priority because for many such
+    relations there will already exist a more direct proof
+    of that fact. *)
+#[export]
+Instance wf_irrefl `{WellFounded A R}: Irreflexive R | 4.
+Proof.
+  intro x. induction x as [x IH] using (well_founded_ind H).
+  exact (fun H => IH x H H).
+Qed.
 
 
 Section Induction_Principles.
@@ -108,26 +120,62 @@ Section Double_Induction_Principles.
 
 End Double_Induction_Principles.
 
+
+Section Strong_Extensionality.
+  Require Import Morphisms.
   
+  Context `{equivalence: Equivalence A equal}.
+  Variable R: relation A.
+  #[local] Infix "==" := equal (at level 70).
+  #[local] Infix "<" := R (at level 70).
 
-Section Derived_Instances.
+  Class Bisimulation (E: relation A): Prop :=
+    bisimilarity: forall x y, E x y ->
+      (forall a, a < x -> exists2 b, b < y & E a b)
+      /\
+      (forall b, b < y -> exists2 a, a < x & E a b).
+    
+  Class StronglyExtensional: Prop :=
+    strong_extensionality: forall (E: relation A) (bisim: Bisimulation E),
+      subrelation E equal.
 
-  Context `{Rwf: WellFounded A R}.
-  Context `{Rwf': WellFounded A' R'}.
+  Let bisimilar x y := forall t, t < x <-> t < y.
+  #[local] Infix "~" := bisimilar (at level 70).
 
-  #[local] Infix "≺" := R (at level 70).
-  #[local] Infix "⊀" := (complement R) (at level 70).
-  #[local] Infix "≺'" := R' (at level 70).
-
-(** Every well-founded relation is irreflexive. We give
-    this instance low-ish priority because for many such
-    relations there will already exist a more direct proof
-    of that fact. *)
-  #[export]
-  Instance wf_irrefl: Irreflexive R | 5.
-  Proof.
-    intro x. induction x as [x IH] using wf_ind.
-    exact (fun H => IH x H H).
+  #[local] Instance bisim: Bisimulation bisimilar.
+  Proof using equivalence.
+    firstorder.
   Qed.
 
-End Derived_Instances.
+  #[local] Instance bisim_equivalence: Equivalence bisimilar.
+  Proof.
+    split; autounfold; unfold bisimilar; firstorder.
+  Qed.
+
+  #[global]
+  Instance we_from_se {Rse: StronglyExtensional}: WeaklyExtensional equal R.
+  Proof.
+    exact (strong_extensionality bisim).
+  Qed.
+
+  #[global]
+  Instance wf_we_is_se {Rwf: WellFounded R} {Rwe: WeaklyExtensional equal R}:
+    StronglyExtensional.
+  Proof.
+  Abort.
+
+End Strong_Extensionality.
+
+
+#[global] Instance nat_wo: WellOrder eq lt.
+Proof.
+  split.
+  Require Import Arith_base.
+  - exact lt_wf.
+  - exact lt_trans.
+  - intros m n H.
+    destruct (lt_eq_lt_dec n m) as [[L|E]|G]; [exfalso | auto | exfalso].
+    + specialize (proj1 (H _) L). apply irreflexivity.
+    + specialize (proj2 (H _) G). apply irreflexivity.
+Qed.
+
