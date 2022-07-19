@@ -2,7 +2,12 @@ Require Import
   Coq.Relations.Relation_Definitions
   Coq.Relations.Relation_Operators
   Coq.Classes.RelationClasses
+  Coq.Classes.Morphisms
+  Coq.Setoids.Setoid
+  Coq.Program.Basics
   Coq.Logic.StrictProp.
+
+Local Open Scope signature_scope.
 
 Generalizable Variables A B P Q R equal.
 
@@ -27,17 +32,6 @@ Class WellOrder `(equivalence: Equivalence A equal)
 }.
 
 Arguments WellOrder {A} equal {equivalence} R.
-
-(** Every well-founded relation is irreflexive. We give
-    this instance low priority because for many such
-    relations there will already exist a more direct proof
-    of that fact. *)
-#[export]
-Instance wf_irrefl `{WellFounded A R}: Irreflexive R | 4.
-Proof.
-  intro x. induction x as [x IH] using (well_founded_ind H).
-  exact (fun H => IH x H H).
-Qed.
 
 
 Section Induction_Principles.
@@ -121,13 +115,34 @@ Section Double_Induction_Principles.
 End Double_Induction_Principles.
 
 
+Section Derived_Instances.
+
+  (** A well-founded relation is necessarily irreflexive. (We give
+      this instance low priority because for many such relations
+      there will already exist a simpler proof of irreflexivity.) *)
+  Global Instance wf_irrefl `{WellFounded A R}: Irreflexive R | 4.
+  Proof.
+    intro x. induction x as [x IH] using (well_founded_ind H).
+    exact (fun H => IH x H H).
+  Qed.
+
+
+  Global Instance wo_proper `{WellOrder A equal R}:
+    Proper (equal ==> equal ==> impl) R.
+  Proof.
+    (* I don't even know if this is true. *)
+  Abort.
+
+End Derived_Instances.
+
+
 Section Strong_Extensionality.
   Require Import Morphisms.
   
   Context `{equivalence: Equivalence A equal}.
   Variable R: relation A.
-  #[local] Infix "==" := equal (at level 70).
-  #[local] Infix "<" := R (at level 70).
+  Local Infix "==" := equal (at level 70).
+  Local Infix "<" := R (at level 70).
 
   Class Bisimulation (E: relation A): Prop :=
     bisimilarity: forall x y, E x y ->
@@ -135,39 +150,50 @@ Section Strong_Extensionality.
       /\
       (forall b, b < y -> exists2 a, a < x & E a b).
     
-  Class StronglyExtensional: Prop :=
-    strong_extensionality: forall (E: relation A) (bisim: Bisimulation E),
+  Class Extensional: Prop :=
+    extensionality: forall (E: relation A) (bisim: Bisimulation E),
       subrelation E equal.
 
   Let bisimilar x y := forall t, t < x <-> t < y.
-  #[local] Infix "~" := bisimilar (at level 70).
+  Local Infix "~" := bisimilar (at level 70).
 
-  #[local] Instance bisim: Bisimulation bisimilar.
+  Local Instance bisim: Bisimulation bisimilar.
   Proof using equivalence.
     firstorder.
   Qed.
 
-  #[local] Instance bisim_equivalence: Equivalence bisimilar.
+  Local Instance bisim_equivalence: Equivalence bisimilar.
   Proof.
     split; autounfold; unfold bisimilar; firstorder.
   Qed.
 
-  #[global]
-  Instance we_from_se {Rse: StronglyExtensional}: WeaklyExtensional equal R.
+  Global Instance we_from_se {Rext: Extensional}: WeaklyExtensional equal R.
   Proof.
-    exact (strong_extensionality bisim).
+    exact (extensionality bisim).
   Qed.
 
-  #[global]
-  Instance wf_we_is_se {Rwf: WellFounded R} {Rwe: WeaklyExtensional equal R}:
-    StronglyExtensional.
+  Global Instance wf_we_is_se {Rprop: Proper (equal ==> equal ==> iff) R}
+                              {Rwf: WellFounded R}
+                              {Rwe: WeaklyExtensional equal R}:
+    Extensional.
   Proof.
-  Abort.
+    intros E bisim.
+    intros x y.
+    induction x, y as [x y IH] using (wf_double_ind (R' := R)).
+    intro H. apply bisim in H.
+    apply weak_extensionality. split; intro L.
+    - destruct (proj1 H t L) as [u L' e].
+      specialize (IH t u L L' e).
+      now rewrite -> IH.
+    - destruct (proj2 H t L) as [u L' e].
+      specialize (IH u t L' L e).
+      now rewrite <- IH.
+  Qed.
 
 End Strong_Extensionality.
 
 
-#[global] Instance nat_wo: WellOrder eq lt.
+Global Instance nat_wo: WellOrder eq lt.
 Proof.
   split.
   Require Import Arith_base.
