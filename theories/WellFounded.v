@@ -9,7 +9,7 @@ Require Import
 
 Local Open Scope signature_scope.
 
-Generalizable Variables A B P Q R equal.
+Generalizable Variables A P R equal.
 
 Set Implicit Arguments.
 
