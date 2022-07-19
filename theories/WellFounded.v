@@ -137,8 +137,7 @@ End Derived_Instances.
 
 
 Section Strong_Extensionality.
-  Require Import Morphisms.
-  
+
   Context `{equivalence: Equivalence A equal}.
   Variable R: relation A.
   Local Infix "==" := equal (at level 70).
