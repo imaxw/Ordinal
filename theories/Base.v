@@ -24,7 +24,7 @@
 
 From Ordinal Require Import CommonHeader WellOrderClass Notations.
 
-From Coq Require Import Arith.Arith_base.
+Require Import Arith_base.
 
 Generalizable Variables A B C I J K R X Y Z eqA.
 
@@ -657,8 +657,8 @@ Module Ord <: EqLtLe' <: StrOrder.
   End From_Nat.
   
 
-  Section Indexed_Supremum.
-    (** The supremum, with regard to ≤, of an indexed family of ordinals.
+  Section Supremum.
+    (** The supremum, or join, of an indexed family of ordinals.
         Conceptually we join all their sources into a sigma-type and
         take the strict supremum of the corresponding join of their
         source maps.
@@ -778,7 +778,7 @@ Module Ord <: EqLtLe' <: StrOrder.
       change x with (const x a) at 2. apply sup_ge.
     Qed.
 
-  End Indexed_Supremum.
+  End Supremum.
 
 
   Section Pairwise_Maximum.
@@ -870,18 +870,6 @@ Module Ord <: EqLtLe' <: StrOrder.
     Qed.
   
   End Pairwise_Minimum.
-
-  Definition downset (o: Ord) := {x: Ord | x < o}.
-  #[global] Notation "⇓ o" := (downset o) (at level 50).
-  
-  Section Downset.
-
-    Let proj := @proj1_sig _ _ : S → Ord.
-    Local Coercion proj: S >-> Ord.eq
-
-    Let s := sup p.
-
-  End Downset.
 
 End Ord.
 
