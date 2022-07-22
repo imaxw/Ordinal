@@ -2,6 +2,6 @@
 
 theories/Notations.v
 theories/CommonHeader.v
-theories/WellFounded.v
+theories/WellOrderClass.v
 theories/Base.v
 theories/Finite.v

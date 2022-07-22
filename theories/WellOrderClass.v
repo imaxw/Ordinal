@@ -1,10 +1,4 @@
-Require Import
-  Coq.Relations.Relation_Definitions
-  Coq.Program.Basics
-  Coq.Classes.Morphisms
-  Coq.Logic.StrictProp.
-
-Require Coq.Setoids.Setoid.
+Require Import Relations Morphisms Setoid.
 
 Local Open Scope signature_scope.
 
@@ -13,6 +7,16 @@ Generalizable Variables A P R equal.
 Set Implicit Arguments.
 
 Existing Class well_founded.
+Arguments well_founded_induction_type {_ _ _}.
+Arguments well_founded_induction {_ _ _}.
+Arguments well_founded_ind {_ _ _}.
+Arguments Fix {_ _ _}.
+
+Global Instance wf_irrefl `{well_founded A R}: Irreflexive R | 4.
+Proof.
+  intro x. induction x as [x IH] using well_founded_ind.
+  exact (fun H => IH x H H).
+Qed.
 
 Class WeaklyExtensional `(equivalence: Equivalence A equal)
                          (R: relation A) :=
@@ -32,50 +36,33 @@ Class WellOrder `(equivalence: Equivalence A equal)
 Arguments WellOrder {A} equal {equivalence} R.
 
 
-Section Induction_Principles.
+Definition well_founded_induction_S `{Rwf: well_founded A R} :=
+  fun (P: A -> SProp) ih a => Acc_sind P (fun x _ => ih x) (Rwf a).
+
+
+Section Infinite_Descent.
 
   Context `{Rwf: well_founded A R}.
-
-  Definition wf_rect := well_founded_induction_type Rwf.
-  Definition wf_rec := well_founded_induction Rwf.
-  Definition wf_ind := well_founded_ind Rwf.
-
-  Definition wf_sind (P: A -> SProp) :=
-    fun ih a => Acc_sind P (fun x _ => ih x) (Rwf a).
-
-  Definition wf_recursive (B: Type):
-      (forall x : A, (forall y : A, R y x -> B) -> B) -> A -> B
-    := well_founded_induction_type Rwf (fun _ => B).
   
   Lemma infinite_descent (P: A -> Prop):
       (forall x: A, P x -> exists2 z, R z x & P z) ->
       forall a: A, ~ P a.
   Proof.
-    intros DH a. induction a as [x IH] using wf_ind.
+    intros DH a. induction a as [x IH] using well_founded_ind.
     intro H.
     specialize (DH x H) as [z H1 H2].
     exact (IH z H1 H2).
   Qed.
-  
-  Lemma infinite_descent_S (P: A -> SProp):
-      (forall x: A, P x -> Squash (exists2 z, R z x & Box (P z))) ->
-      forall a: A, P a -> sEmpty.
-  Proof.
-    intros DH a. induction a as [x IH] using wf_sind.
-    intro H.
-    specialize (DH x H) as [[y H1 [H2]]].
-    exact (IH y H1 H2).
-  Qed.
 
-  Definition infinite_descent_T (P: A -> Type):
+  Definition infinite_descent_type (P: A -> Type):
       (forall x: A, P x -> {z & R z x & P z}) ->
       forall a: A, notT (P a)
     := fun DH =>
-        wf_rect _
+        well_founded_induction_type _
           (fun a IH H =>
             let (z, H1, H2) := (DH a H) in IH z H1 H2).
 
-End Induction_Principles.
+End Infinite_Descent.
 
 
 Section Double_Induction_Principles.
@@ -89,7 +76,7 @@ Section Double_Induction_Principles.
         P x y) ->
       forall a b, P a b.
   Proof.
-    induction a using wf_rect; firstorder.
+    induction a using well_founded_induction_type; firstorder.
   Defined.
 
   Definition wf_double_sind (P: A -> A' -> SProp):
@@ -98,40 +85,13 @@ Section Double_Induction_Principles.
         P x y) ->
       forall a b, P a b.
   Proof.
-    induction a using wf_sind; firstorder.
+    induction a using well_founded_induction_S; firstorder.
   Defined.
 
   Definition wf_double_rec (P: A -> A' -> Set) := wf_double_rect P.
   Definition wf_double_ind (P: A -> A' -> Prop) := wf_double_rect P.
 
-  Definition wf_double_recursive (B: Type):
-      (forall x y,
-        (forall x' y', R x' x -> R' y' y -> B) -> B) ->
-      A -> A' -> B
-    := wf_double_rect (fun _ _ => B).
-
 End Double_Induction_Principles.
-
-
-Section Derived_Instances.
-
-  (** A well-founded relation is necessarily irreflexive. (We give
-      this instance low priority because for many such relations
-      there will already exist a simpler proof of irreflexivity.) *)
-  Global Instance wf_irrefl `{well_founded A R}: Irreflexive R | 4.
-  Proof.
-    intro x. induction x as [x IH] using (well_founded_ind H).
-    exact (fun H => IH x H H).
-  Qed.
-
-
-  Global Instance wo_proper `{WellOrder A equal R}:
-    Proper (equal ==> equal ==> impl) R.
-  Proof.
-    (* I don't even know if this is true. *)
-  Abort.
-
-End Derived_Instances.
 
 
 Section Strong_Extensionality.
