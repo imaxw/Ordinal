@@ -1,11 +1,10 @@
 Require Import
   Coq.Relations.Relation_Definitions
-  Coq.Relations.Relation_Operators
-  Coq.Classes.RelationClasses
-  Coq.Classes.Morphisms
-  Coq.Setoids.Setoid
   Coq.Program.Basics
+  Coq.Classes.Morphisms
   Coq.Logic.StrictProp.
+
+Require Coq.Setoids.Setoid.
 
 Local Open Scope signature_scope.
 
@@ -204,50 +203,4 @@ Proof.
     destruct (lt_eq_lt_dec n m) as [[L|E]|G]; [exfalso | auto | exfalso].
     + specialize (proj1 (H _) L). apply irreflexivity.
     + specialize (proj2 (H _) G). apply irreflexivity.
-Qed.
-
-
-Definition Empty_relation (x y: Empty_set): Prop :=
-  match x with end.
-
-Global Instance Empty_wo: WellOrder eq (fun x _: Empty_set => match x with end).
-Proof.
-  easy.
-Qed.
-
-Global Instance unit_wo: WellOrder eq (fun _ _: unit => False).
-Proof.
-  split; cbv; try easy.
-  now destruct x, y.
-Qed.
-
-Definition sum_equiv `(equal: relation A) `{!Equivalence equal}
-                     `(equal': relation A') `{!Equivalence equal}
-                     (x y: A + A') :=
-  match x, y with
-  | inl a, inl b => equal a b
-  | inl a, inr b => False
-  | inr a, inl b => False
-  | inr a, inr b => equal' a b
-  end.
-Arguments sum_equiv {_} _ {_ _} _ {_}.
-
-Definition sum_prec `(R: relation A) `{!well_founded R}
-                    `(R': relation A') `{!well_founded R'}
-                    (x y: A + A') :=
-  match x, y with
-  | inl a, inl b => R a b
-  | inl a, inr b => True
-  | inr a, inl b => False
-  | inr a, inr b => R' a b
-  end.
-Arguments sum_prec {_} _ {_ _} _ {_}.
-
-Global Instance sum_equivalence `(Equivalence A equal) `(Equivalence A' equal'):
-  Equivalence (sum_equiv equal equal').
-Proof.
-  split; autounfold.
-  - intros [a | a]; simpl; reflexivity.
-  - intros [a | a] [b | b]; simpl; try tauto; now symmetry.
-  - intros [a | a] [b | b] [c | c]; simpl; try tauto; now transitivity b.
 Qed.
