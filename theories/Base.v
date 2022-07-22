@@ -1,13 +1,3 @@
-From Ordinal Require Import
-  CommonHeader
-  WellFounded
-  Notations.
-
-Require Import Arith_base.
-
-Generalizable Variables A B C I J K R X Y Z eqA.
-
-
 (** Definition of the ordered setoid of ordinal numbers, together with
     proofs that it is indeed an ordered setoid under the given relations.
     That is:
@@ -27,8 +17,8 @@ Generalizable Variables A B C I J K R X Y Z eqA.
     Implementation note:
     A rather more elegant mutually recursive definition of < and <= is
     possible, and was originally to be used here:
-    - ssup f <= y when, for all a:A, f(a) < y; 
-    - x < ssup g when, for some b:B, x <= g(b). 
+    - ssup f ≤ y when, for all a:A, f(a) < y; 
+    - x < ssup g when, for some b:B, x ≤ g(b). 
        However, Coq does not accept these as fixpoint definitions since
     they descend on different parameters. It does accept them as
     inductive definitions, but this would require them to be redefined
@@ -36,6 +26,13 @@ Generalizable Variables A B C I J K R X Y Z eqA.
     We have instead included proofs of the above properties for our
     definitions, as lemmata le_lt and lt_le respectively.
 *)
+
+From Ordinal Require Import CommonHeader WellFounded Notations.
+
+From Coq Require Import Arith.Arith_base.
+
+Generalizable Variables A B C I J K R X Y Z eqA.
+
 
 (** An ordinal is represented by the image of a (possibly empty) function
     with codomain the ordinals. Conceptually it 'is' the least ordinal
@@ -63,15 +60,9 @@ Module Ord <: EqLtLe' <: StrOrder.
 
   Fixpoint le o o': Prop :=
     ∀ a: src o, ∃ a': src o', le (src_map o a) (src_map o' a').
-    (*match o, o' with
-    | ssup x, ssup y => ∀ a, ∃ b, le (x a) (y b)
-    end.*)
 
   Fixpoint lt o o': Prop :=
     ∃ a': src o', ∀ a: src o, lt (src_map o a) (src_map o' a').
-    (*match o, o' with
-    | ssup x, ssup y => ∃ b, ∀ a, lt (x a) (y b)
-    end.*)
 
   Definition eq o o': Prop := le o o' ∧ le o' o.
   Definition ge o o': Prop := le o' o.
