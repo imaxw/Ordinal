@@ -33,7 +33,7 @@ Generalizable Variables A B C I J K R X Y Z eqA.
     with codomain the ordinals. Conceptually it 'is' the least ordinal
     greater than every element of the function's range. *)
 
-Inductive Ord: Type := ssup `(x: A → Ord).
+Inductive Ord := ssup `(x: A → Ord).
 Bind Scope Ord_scope with Ord.
 
 Module Ord <: EqLtLe' <: StrOrder.
@@ -42,16 +42,10 @@ Module Ord <: EqLtLe' <: StrOrder.
 
   Definition t := Ord.
 
-  Definition src (w: Ord): Type :=
-    match w with @ssup A f => A end.
+  Definition src (o: Ord) := let (A, _) := o in A.
   
-  Definition src_map (w: Ord): src w → Ord :=
-    match w with @ssup A f => f end.
-
-  Definition rect := Ord_rect.
-  Definition rec := Ord_rec.
-  Definition ind := Ord_ind.
-  Definition sind := Ord_sind.
+  Definition src_map (o: Ord) : src o → Ord :=
+    match o with ssup f => f end.
 
   Fixpoint le o o': Prop :=
     ∀ a: src o, ∃ a': src o', le (src_map o a) (src_map o' a').
