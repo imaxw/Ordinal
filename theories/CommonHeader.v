@@ -8,6 +8,7 @@ From Coq Require Export
   Classes.Morphisms
   Classes.Equivalence
   Classes.SetoidClass
+  Setoids.Setoid
   Program.Basics
   Program.Combinators
   Unicode.Utf8.
@@ -93,38 +94,6 @@ Lemma ex_unit [P]: (∃ x: unit, P x) → P tt.
 Proof. destruct 1 as [[]]; assumption. Qed.
 
 
-Section Maps.
-
-  Variables A B C C1 C2 D D1 D2: Type.
-
-  Definition empty_map: ∅ → C := ltac:(tauto).
-  Definition const: C → D → C := ltac:(tauto).
-  Definition fprod: (D → C1) → (D → C2) → D → (C1 × C2) := λ f g x, (f x, g x).
-  Definition fsum: (D1 → C) → (D2 → C) → (D1 + D2) → C := sum_rect (λ _, C).
-
-  Property fpair_fst: ∀f g, ∀ x, fst (fprod f g x) = f x. trivial. Qed.
-  Property fpair_snd: ∀ f g, ∀ x, snd (fprod f g x) = g x. trivial. Qed.
-  Property fsum_inl: ∀ f g, ∀ x, fsum f g (inl x) = f x. trivial. Qed.
-  Property fsum_inr: ∀ f g, ∀ x, fsum f g (inr x) = g x. trivial. Qed.
-
-  Definition prod_assocL: A × (B × C) -> (A × B) × C := ltac:(tauto).
-  Definition prod_assocR: (A × B) × C -> A × (B × C) := ltac:(tauto).
-  Definition sum_assocL: A + (B + C) -> (A + B) + C := ltac:(tauto).
-  Definition sum_assocR: (A + B) + C → A + (B + C) := ltac:(tauto).
-
-End Maps.
-Arguments empty_map {C}.
-#[export] Hint Unfold const: core.
-#[export] Hint Unfold empty_map: core.
-
-Notation "⟨ ⟩" := (const tt) (format "⟨ ⟩"). 
-Notation "⟨ f ⟩" := f (only parsing).
-Notation "⟨ f , g , .. , h ⟩" := (fprod .. (fprod f g) .. h).
-Notation "[ ]" := (@empty_map _) (format "[ ]").
-Notation "[ f ]" := f (only parsing).
-Notation "[ f , g , .. , h ]" := (fsum .. (fsum f g) .. h). 
-
-
 Section Existential_Application.
 
   Local Coercion sig_of_sig2: sig2 >-> sig.
@@ -170,21 +139,6 @@ Ltac elim_quantifiers :=
   | [H: exists _ : unit, _ |- _] => destruct H as [[] H]
   | [H: forall _ : unit, _ |- _] => specialize (H tt)
   end.
-
-
-Section MoreMorphisms.
-
-  Local Open Scope signature_scope.
-
-  #[export] Existing Instance proper_sym_impl_iff.
-
-  #[export]
-  Instance sym_lift `(Symmetric A R) `(Symmetric A' R'): Symmetric (R ==> R').
-  Proof.
-    unfold Symmetric, respectful; auto.
-  Qed.
-
-End MoreMorphisms.
 
 
 Definition rfcompose `(R: relation A) `(f: D → A): relation D :=
