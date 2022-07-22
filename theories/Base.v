@@ -3,13 +3,8 @@
     That is:
     - Ord.eq (==) is an equivalence relation;
     - Ord.lt (<) is an ==-compatible strict ordering relation;
-    - Ord.le (<=) is a partial ordering relation w.r.t. ==;
-    - < is a subrelation of <=.
-
-    In the course of doing this, we also prove:
-    - < is well-founded and so transfinite induction is valid;
-    - < and <= are co-transitive; and
-    - the constructor for Ord is ==-compatible and <=-covariant.
+    - Ord.le (≤) is a partial ordering relation w.r.t. ==;
+    - < is a subrelation of ≤.
 
     Some desirable properties (such as totality) require excluded middle,
     and are deferred to the OrdClassical module.
@@ -509,7 +504,7 @@ Module Ord <: EqLtLe' <: StrOrder.
 
     Context `{equivA: Equivalence A eqA}.
     Context {R_compat: Proper (eqA ==> eqA ==> iff) R}.
-    Local Infix "=" := eqA: type_scope.
+    Local Infix "≃" := eqA (at level 70).
 
     Global Instance from_wf_compat: Proper (eqA ==> eq) from_wf.
     Proof.
@@ -538,7 +533,7 @@ Module Ord <: EqLtLe' <: StrOrder.
 
     Hypothesis Rwext: WeaklyExtensional eqA R.
 
-    Property from_wf_inj: ∀ x y, from_wf x == from_wf y → x = y.
+    Property from_wf_inj: ∀ x y, from_wf x == from_wf y → x ≃ y.
     Proof.
       induction y as [y IH] using wf_ind. intro Eq.
       apply weak_extensionality. intro t; split.
@@ -548,10 +543,13 @@ Module Ord <: EqLtLe' <: StrOrder.
 
 
   Section From_Nat.
-    (** Mapping of the natural numbers into the finite ordinals. *)
-    Local Open Scope signature_scope.
+    (** Mapping of the natural numbers into the finite ordinals. We could
+    just use from_wf, but we instead define a simpler function and then
+    show that it is equivalent. *)
 
-    #[export] Instance from_wf_nat_covariance:
+    Definition from_nat (n: nat): Ord := Nat.iter n succ zero.
+
+    Local Lemma from_wf_nat_covariance:
       Proper (Peano.le ==> le) (from_wf (R := Peano.lt)).
     Proof.
       intros m n h.
@@ -576,8 +574,6 @@ Module Ord <: EqLtLe' <: StrOrder.
       - intro. assert (l: (n < S n)%nat) by auto.
         now exists (exist _ n l).
     Qed.
-
-    Definition from_nat (n: nat): Ord := Nat.iter n succ zero.
 
     Proposition from_wf_is_from_nat:
       pointwise_relation _ eq (from_wf (R := Peano.lt)) from_nat.
@@ -637,22 +633,28 @@ Module Ord <: EqLtLe' <: StrOrder.
   
 
   Section Supremum.
+    (** The supremum, with regard to ≤, of an indexed family of ordinals.
+        Conceptually we join all their sources into a sigma-type and
+        take the strict supremum of the corresponding join of their
+        source maps.
+        *)
 
     Section Def.
-      Context {I: Type}.
-      Variable x: I → Ord.
 
-      Let Smap (j: {i:I & src (x i)}) : Ord :=
-        let (i, a) := j in src_map (x i) a.
+      Context `(x: A → Ord).
 
-      Definition sup: Ord := ssup Smap.
+      Let J: Type := { a: A & src (x a) }.
 
-      Property sup_property: ∀ i: I, x i ≤ sup.
+      Let Jmap: J → Ord := λ j, let (a, b) := j in src_map (x a) b.
+
+      Definition sup: Ord := ssup Jmap.
+
+      Property sup_property: ∀ a: A, x a ≤ sup.
       Proof.
-        intro i. destruct (x i) as [A f] eqn: E.
-        intro a.
-        exists (existT _ i (eq_rect _ _ a _ (symmetry E))).
-        simpl. rewrite -> E. reflexivity.
+        intro a. destruct (x a) as [B y] eqn: E.
+        intro b.
+        exists (existT _ a (eq_rect _ _ b _ (symmetry E))).
+        unfold sup; simpl. rewrite -> E. reflexivity.
       Qed.
 
       Property sup_minimality: ∀ s, (forall i, x i ≤ s) → sup ≤ s.
