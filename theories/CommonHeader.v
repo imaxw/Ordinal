@@ -8,7 +8,6 @@ From Coq Require Export
   Classes.Morphisms
   Classes.Equivalence
   Classes.SetoidClass
-  Setoids.Setoid
   Program.Basics
   Program.Combinators
   Unicode.Utf8.
@@ -17,6 +16,10 @@ Generalizable All Variables.
 
 #[export] Set Implicit Arguments.
 #[export] Set Default Goal Selector "all".
+#[export] Unset Intuition Negation Unfolding.
+
+Arguments ex_intro [_ _] _ _.
+Arguments ex_intro2 [_ _ _] _ _ _.
 
 #[export] Instance pointwise_setoid `(Setoid A) (domain: Type):
   Setoid (domain → A) := Build_Setoid _.
@@ -48,43 +51,46 @@ Fixpoint iter_prod (A: Type) (n: nat): Type :=
   end
 where "A ^ n" := (iter_prod A n): type_scope.
 
+Definition dcompose `(f: ∀ x: A, B x → C) (g: ∀ x :A, B x) := 
+  λ x, f x (g x).
+Infix "•" := dcompose (at level 40, left associativity): type_scope.
   
-Section Logic.
-  
-  Lemma all_ex_conj_left [A B] (L R: A → B → Prop):
-    (∀ x, ∃ y, L x y ∧ R x y) → (∀ x, ∃ y, L x y).
-  Proof. firstorder. Qed.
-  
-  Lemma all_ex2_conj_left [A B] (L R: A → B → Prop):
-    (∀ x, ∃2 y, L x y & R x y) → (∀ x, ∃ y, L x y).
-  Proof. firstorder. Qed.
-  
-  Lemma all_ex_conj_right [A B] (L R: A → B → Prop):
-    (∀ x, ∃ y, L x y ∧ R x y) → (∀ x, ∃ y, R x y).
-  Proof. firstorder. Qed.
-  
-  Lemma all_ex2_conj_right [A B] (L R: A → B → Prop):
-    (∀ x, ∃2 y, L x y & R x y) → (∀ x, ∃ y, R x y).
-  Proof. firstorder. Qed.
 
-  Lemma ex_all_conj_left [A B] (L R: A → B → Prop):
-    (∃ x, ∀ y, L x y ∧ R x y) → (∃ x, ∀ y, L x y).
-  Proof. firstorder. Qed.
+Section Double_Quantifier_Projections.
 
-  Lemma ex_all_conj_right [A B] (L R: A → B → Prop):
-    (∃ x, ∀ y, L x y ∧ R x y) → (∃ x, ∀ y, R x y).
-  Proof. firstorder. Qed.
+  Variables A B: Type.
+  Variables P Q: A → B → Prop.
+  Variable f: ∀ (x: A) (y: B), P x y → Q x y.
+
+  Definition all_ex (ae: ∀ x, ∃ y, P x y): ∀ x, ∃ y, Q x y
+    := λ x, let (y, p) := ae x in ex_intro y (f p).
+
+  Definition ex_all (ea: ∃ x, ∀ y, P x y): ∃ x, ∀ y, Q x y
+    := let (x, a) := ea in ex_intro x (λ y, f (a y)).
+  
+  Definition all_all (aa: ∀ x y, P x y): ∀ x y, Q x y
+    := λ x y, f (aa x y).
+
+  Definition ex_ex (ee: ∃ x y, P x y): ∃ x y, Q x y
+    := let (x, e) := ee in let (y, p) := e in ex_intro x (ex_intro y (f p)).
+
+End Double_Quantifier_Projections.
+
+Arguments all_ex [_ _ _ _] _ _.
+Arguments ex_all [_ _ _ _] _ _.
+Arguments all_all [_ _ _ _] _ _.
+Arguments ex_ex [_ _ _ _] _ _.
+Print Implicit all_ex.
+
     
-  Lemma empty_notT [A]: ¬inhabited A → notT A.
-  Proof λ H a, H (inhabits a).
+Lemma empty_notT A: ¬inhabited A → notT A.
+Proof λ H a, H (inhabits a).
 
-  Lemma ex_empty [P] [Q]: (∃ x: ∅, Q x) → P.
-  Proof. intro H; exfalso; destruct H as [[]]. Defined.
+Lemma ex_empty [P] [Q]: (∃ x: ∅, Q x) → P.
+Proof. intro H; exfalso; destruct H as [[]]. Defined.
 
-  Lemma ex_unit [P]: (∃ x: unit, P x) → P tt.
-  Proof. destruct 1 as [[]]; assumption. Qed.
-
-End Logic.
+Lemma ex_unit [P]: (∃ x: unit, P x) → P tt.
+Proof. destruct 1 as [[]]; assumption. Qed.
 
 
 Section Maps.
@@ -121,6 +127,10 @@ Notation "[ f , g , .. , h ]" := (fsum .. (fsum f g) .. h).
 
 Section Existential_Application.
 
+  Local Coercion sig_of_sig2: sig2 >-> sig.
+  Local Coercion sigT_of_sigT2: sigT2 >-> sigT.
+  Local Coercion ex_of_ex2: ex2 >-> ex.
+
   Variables (A B: Type) (pB: Prop).
   Variables P Q: A -> Prop.
   Variables sP sQ: A -> SProp.
@@ -133,16 +143,16 @@ Section Existential_Application.
    let (x, p, q) := a in f x p q.
 
   Definition sig_apply (f: forall x, P x -> B) (a: sig P) :=
-    let (x, p) := a in f x p.
+    f (proj1_sig a) (proj2_sig a).
 
-  Definition sig2_apply (f: forall x:A, P x -> Q x -> pB) (a: ex2 P Q) :=
-    let (x, p, q) := a in f x p q.
+  Definition sig2_apply (f: forall x:A, P x -> Q x -> B) (a: sig2 P Q) :=
+    f (proj1_sig a) (proj2_sig a) (proj3_sig a).
 
   Definition sigT_apply (f: forall x, tP x -> B) (a: sigT tP) :=
-    let (x, p) := a in f x p.
+    f (projT1 a) (projT2 a).
 
   Definition sigT2_apply (f: forall x, tP x -> tQ x -> B) (a: sigT2 tP tQ) :=
-    let (x, p, q) := a in f x p q.
+    f (projT1 a) (projT2 a) (projT3 a).
 
   Definition Ssig_apply (f: forall x, sP x -> B) (a: Ssig sP) :=
     f (Spr1 a) (Spr2 a).
@@ -161,36 +171,6 @@ Ltac elim_quantifiers :=
   | [H: forall _ : unit, _ |- _] => specialize (H tt)
   end.
 
-Section Minimality_and_Maximality.
-
-  Class Minimal `(P: A → Prop) `{preo: PreOrder A R} (a: A) : Prop :=
-  {
-    minimal_property: P a;
-    minimality: ∀ x: A, P x → R a x
-  }.
-
-  Class Maximal `(P: A → Prop) `{preo: PreOrder A R}  (a: A): Prop :=
-  {
-    maximal_property: P a;
-    maximality: ∀ x: A, P x → R x a
-  }.
-
-  Lemma Minimal_unique `(min: Minimal A P R a)
-        `{equivalence: Equivalence A equ} `{po: PartialOrder A equ R}:
-    ∀ x: A, Minimal P x → equ x a.
-  Proof.
-    destruct min, 1; auto using antisymmetry.
-  Qed.
-
-  Lemma Maximal_unique `(max: Maximal A P R a)
-        `{equivalence: Equivalence A equ} {po: PartialOrder equ R}:
-    ∀ x: A, Maximal P x → equ x a.
-  Proof.
-    destruct max, 1; auto using antisymmetry.
-  Qed.
-
-End Minimality_and_Maximality.
-
 
 Section MoreMorphisms.
 
@@ -207,34 +187,38 @@ Section MoreMorphisms.
 End MoreMorphisms.
 
 
-Create HintDb rels.
-#[export] Hint Immediate Equivalence_Reflexive: rels.
-#[export] Hint Immediate PreOrder_Reflexive: rels.
-#[export] Hint Immediate StrictOrder_Irreflexive: rels.
-#[export] Hint Unfold complement: rels.
-#[export] Hint Unfold flip: rels.
-#[export] Hint Unfold relation_conjunction: rels.
-#[export] Hint Unfold relation_disjunction: rels.
-#[export] Hint Unfold pointwise_relation: rels.
-#[export] Hint Unfold Reflexive: rels.
-#[export] Hint Unfold Irreflexive: rels.
-#[export] Hint Unfold Symmetric: rels.
-#[export] Hint Unfold Asymmetric: rels.
-#[export] Hint Unfold Antisymmetric: rels.
-#[export] Hint Unfold Transitive: rels.
-#[export] Hint Unfold Proper: rels.
-#[export] Hint Unfold respectful: rels.
-#[export] Hint Unfold impl: rels.
-#[export] Hint Unfold iff: rels.
-#[export] Hint Unfold predicate_equivalence: rels.
-#[export] Hint Unfold predicate_implication: rels.
-#[export] Hint Unfold pointwise_equivalence: rels.
-#[export] Hint Unfold relation_equivalence: rels.
+Definition rfcompose `(R: relation A) `(f: D → A): relation D :=
+  λ x y, R (f x) (f y).
 
-Create HintDb ord.
-#[export] Hint Constructors Minimal: ord.
-#[export] Hint Constructors Maximal: ord.
-#[export] Hint Constructors unit: Ord.
+Inductive rcompose `(R: A → B → Type) `(S: B → C → Type): A → C → Type :=
+| rcompose_by a b c: R a b → S b c → rcompose R S a c.
+
+Infix "≪" := rfcompose (at level 30, no associativity): type_scope.
+Infix "~" := rcompose (at level 30, no associativity): type_scope.
+
+
+(** We'll be working with a number of flipped, conjoined, etc. 
+  relations and these unfolds will make life easier. *)
+#[export] Hint Unfold flip: core.
+#[export] Hint Unfold complement: core.
+#[export] Hint Unfold relation_conjunction: core.
+#[export] Hint Unfold relation_disjunction: core.
+#[export] Hint Unfold pointwise_relation: core.
+#[export] Hint Unfold Reflexive: core.
+#[export] Hint Unfold Irreflexive: core.
+#[export] Hint Unfold Symmetric: core.
+#[export] Hint Unfold Asymmetric: core.
+#[export] Hint Unfold Antisymmetric: core.
+#[export] Hint Unfold Transitive: core.
+#[export] Hint Unfold Proper: core.
+#[export] Hint Unfold respectful: core.
+#[export] Hint Unfold impl: core.
+#[export] Hint Unfold predicate_equivalence: core.
+#[export] Hint Unfold predicate_implication: core.
+#[export] Hint Unfold pointwise_equivalence: core.
+#[export] Hint Unfold relation_equivalence: core.
 
 Declare Scope Ord_scope.
 Delimit Scope Ord_scope with Ω.
+
+Create HintDb ord.

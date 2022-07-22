@@ -70,7 +70,7 @@ Section Finiteness.
     - rewrite <- e; exact IHF.
   Qed.
 
-  Theorem ω_not_finite: notT (Finite (sup⁺ from_nat)).
+  Theorem ω_not_finite: notT (Finite (ssup from_nat)).
   Proof.
     intro H; apply to_nat in H. destruct H as [n [H _]].
     induction n.
@@ -94,22 +94,22 @@ Module FinOrd.
     induction n as [| n IH].
     - exact (Fin.case0 _).
     - intro x. simple inversion x.
-      + exact (sup⁺ IH).
+      + exact (ssup IH).
       + exact (eq_rect _ (λ n, Fin n → t) IH _ (eq_add_S _ _ (eq_sym H0))).
   Defined.
 
-  Property Fin_0_0: sup⁺ (@from_Fin 0) == 0.
+  Property Fin_0_0: ssup (@from_Fin 0) == 0.
   Proof.
     apply zero_empty, Fin0_empty.
   Qed.
 
   Property Fin_S_S: ∀ n,
-      sup⁺ (@from_Fin (Nat.succ n)) == succ (sup⁺ (@from_Fin n)).
+      ssup (@from_Fin (Nat.succ n)) == succ (ssup (@from_Fin n)).
   Proof.
     intro n. apply succ_unique.
-    - now_show (sup⁺ (@from_Fin n) < sup⁺ (@from_Fin (Nat.succ n))).
+    - now_show (ssup (@from_Fin n) < ssup (@from_Fin (Nat.succ n))).
       exists Fin.F1.
-      change (from_Fin Fin.F1) with (sup⁺ (@from_Fin n)).
+      change (from_Fin Fin.F1) with (ssup (@from_Fin n)).
       apply strict_sup_greater.
     - intros y H; apply le_lt_reduce.
       now_show (∀ x: Fin.t (Nat.succ n), from_Fin x < y).
@@ -117,12 +117,12 @@ Module FinOrd.
       + (* F1 case *) assumption.
       + (* FS case *)
         simpl.
-        transitivity (sup⁺ (@from_Fin n)).
+        transitivity (ssup (@from_Fin n)).
         * apply strict_sup_greater.
         * exact H.
   Qed.
 
-  Theorem Fin_ordinality: ∀ n:nat, sup⁺ (@from_Fin n) == finite n.
+  Theorem Fin_ordinality: ∀ n:nat, ssup (@from_Fin n) == finite n.
   Proof.
     apply finite_uniqueness; [exact Fin_0_0 | exact Fin_S_S].
   Qed.

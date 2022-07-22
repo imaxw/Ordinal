@@ -1,6 +1,5 @@
-From Coq.Relations Require Import Relation_Definitions.
-From Coq.Program Require Import Basics.
-From Coq.Classes Require Export SetoidClass.
+Require Import Relation_Definitions Program.Basics.
+Require Export SetoidClass Setoid.
 
 Generalizable Variables A B C R S X Y Z equ f g h.
 
@@ -21,7 +20,7 @@ Module Posetoid.
 
     Definition eq: relation A := relation_conjunction leq (flip leq).
 
-    Global Instance equivalence: Equivalence eq.
+    Global Instance equivalence: Equivalence eq | 2.
     Proof.
       split; repeat destruct 1.
       - split; reflexivity.
@@ -29,9 +28,10 @@ Module Posetoid.
       - split; etransitivity; eassumption.
     Qed.
 
-    Global Instance partial_order: PartialOrder eq leq := ltac:(easy).
+    Global Instance partial_order: PartialOrder eq leq.
+    Proof. apply (reflexivity (R := relation_equivalence)). Qed.
     
-    Global Instance setoid: Setoid A | 10 := Build_Setoid equivalence.
+    Global Instance setoid: Setoid A | 2 := Build_Setoid equivalence.
   End Instances.
 
 End Posetoid.

@@ -1,4 +1,3 @@
-
 (** Binary relations, some duplicated from standard library *)
 Reserved Infix "==" (at level 70).
 Reserved Infix "=/=" (at level 70).

@@ -1,9 +1,8 @@
 -Q ./theories/ Ordinal
 
 theories/Notations.v
-theories/Posetoid.v
-theories/StrictOrderedSetoid.v
 theories/CommonHeader.v
+theories/OrderSetoid.v
 theories/WellFounded.v
 theories/Base.v
 theories/Finite.v

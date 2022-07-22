@@ -1,8 +1,11 @@
-From Ordinal Require Import CommonHeader WellFounded Notations.
+From Ordinal Require Import
+  CommonHeader
+  WellFounded
+  Notations.
 
-Require Import PeanoNat.
+Require Import Arith_base.
 
-Generalizable Variables A B C R X Y Z.
+Generalizable Variables A B C I J K R X Y Z eqA.
 
 
 (** Definition of the ordered setoid of ordinal numbers, together with
@@ -24,8 +27,8 @@ Generalizable Variables A B C R X Y Z.
     Implementation note:
     A rather more elegant mutually recursive definition of < and <= is
     possible, and was originally to be used here:
-    - sup⁺ f <= y when, for all a:A, f(a) < y; 
-    - x < sup⁺ g when, for some b:B, x <= g(b). 
+    - ssup f <= y when, for all a:A, f(a) < y; 
+    - x < ssup g when, for some b:B, x <= g(b). 
        However, Coq does not accept these as fixpoint definitions since
     they descend on different parameters. It does accept them as
     inductive definitions, but this would require them to be redefined
@@ -34,53 +37,56 @@ Generalizable Variables A B C R X Y Z.
     definitions, as lemmata le_lt and lt_le respectively.
 *)
 
-
 (** An ordinal is represented by the image of a (possibly empty) function
     with codomain the ordinals. Conceptually it 'is' the least ordinal
     greater than every element of the function's range. *)
 
-Inductive Ord: Type := strict_sup `(f: A → Ord).
-#[global] Bind Scope Ord_scope with Ord.
-Print Ord.
-
-
-#[global] Notation "sup⁺" := strict_sup: Ord_scope.
-
+Inductive Ord: Type := ssup `(x: A → Ord).
+Bind Scope Ord_scope with Ord.
 
 Module Ord <: EqLtLe' <: StrOrder.
+
   Open Scope Ord_scope.
 
   Definition t := Ord.
-  #[global] Bind Scope Ord_scope with t.
 
   Definition src (w: Ord): Type :=
-    match w with @strict_sup A f => A end.
+    match w with @ssup A f => A end.
   
   Definition src_map (w: Ord): src w → Ord :=
-    match w with @strict_sup A f => f end.
+    match w with @ssup A f => f end.
 
-  Fixpoint le x y: Prop :=
-    match x, y with
-    | sup⁺ f, sup⁺ g => ∀ a, ∃ b, f a ≤ g b
-    end
-  where "x ≤ y" := (le x y): Ord_scope.
+  Definition rect := Ord_rect.
+  Definition rec := Ord_rec.
+  Definition ind := Ord_ind.
+  Definition sind := Ord_sind.
 
-  Fixpoint lt x y: Prop :=
-    match x, y with
-    | sup⁺ f, sup⁺ g => ∃ b, ∀ a, f a < g b
-    end
-  where "x < y" := (lt x y): Ord_scope.
+  Fixpoint le o o': Prop :=
+    ∀ a: src o, ∃ a': src o', le (src_map o a) (src_map o' a').
+    (*match o, o' with
+    | ssup x, ssup y => ∀ a, ∃ b, le (x a) (y b)
+    end.*)
 
-  Definition eq x y := le x y ∧ le y x.
-  #[global] Notation "x == y" := (eq x y): Ord_scope.
-  #[global] Notation "x =/= y" := (¬ x == y): Ord_scope.
+  Fixpoint lt o o': Prop :=
+    ∃ a': src o', ∀ a: src o, lt (src_map o a) (src_map o' a').
+    (*match o, o' with
+    | ssup x, ssup y => ∃ b, ∀ a, lt (x a) (y b)
+    end.*)
 
-  Definition apart x y := (lt x y ∨ lt y x).
-  #[global] Notation "x ≶ y" := (apart x y): Ord_scope.
+  Definition eq o o': Prop := le o o' ∧ le o' o.
+  Definition ge o o': Prop := le o' o.
+  Definition gt o o': Prop := lt o' o.
 
-  #[global] Notation "x > y" := (y < x) (only parsing): Ord_scope.
-  #[global] Notation "x ≥ y" := (y ≤ x) (only parsing): Ord_scope.
-  
+  #[export] Hint Unfold ge: core.
+  #[export] Hint Unfold gt: core.
+
+  #[global] Infix "≤" := le: Ord_scope.
+  #[global] Infix "≥" := ge: Ord_scope.
+  #[global] Infix "<" := lt: Ord_scope.
+  #[global] Infix ">" := gt (only parsing): Ord_scope.
+  #[global] Infix "==" := eq: Ord_scope.
+  #[global] Notation "x =/= y" := (not (eq x y)): Ord_scope.
+
   #[global] Notation "x == y == z" := (x == y ∧ y == z): Ord_scope.
   #[global] Notation "x < y < z" := (x < y ∧ y < z): Ord_scope.
   #[global] Notation "x ≤ y ≤ z" := (x ≤ y ∧ y ≤ z): Ord_scope.
@@ -96,209 +102,101 @@ Module Ord <: EqLtLe' <: StrOrder.
   
   Section Reduction_Lemmata.
 
-    Context (w: t) `(f: A -> t) `(g: B -> t).
+    Lemma le_le `(x: A → Ord) `(y: B → Ord):
+      (∀ a, ∃ b, x a ≤ y b) ↔ ssup x ≤ ssup y.
+    Proof. reflexivity. Qed.
 
-    Lemma le_le: (∀ a, ∃ b, f a ≤ g b) ↔ sup⁺ f ≤ sup⁺ g.
-    Proof reflexivity _.
+    Lemma lt_lt `(x: A → Ord) `(y: B → Ord):
+      (∀ a, ∃ b, x a ≤ y b) ↔ ssup x ≤ ssup y.
+    Proof. reflexivity. Qed.
 
-    Lemma lt_lt: (∀ a, ∃ b, f a ≤ g b) ↔ sup⁺ f ≤ sup⁺ g.
-    Proof reflexivity _.
-
-    Lemma le_lt: (∀ a, f a < w) ↔ sup⁺ f ≤ w.
-    Proof using w A f.
-      revert A f; induction w as [A' f' IH].
-      split.
-        intros Hyp a; specialize (Hyp a).
-        set (xx := f a) in *; destruct xx.
-        destruct Hyp; eexists; apply IH; eassumption.
-      Qed.
-
-    Lemma lt_le: (∃ a, w ≤ f a) ↔ (w < sup⁺ f).
+    Lemma le_lt (o: Ord): ∀ [A] (x: A → Ord), (∀ a, x a < o) ↔ ssup x ≤ o.
     Proof.
-      revert A f; induction w as [A' f' IH].
+      induction o as [A' x' IH].
       split.
-        intros [a H]; exists a.
-        set (xx := f a) in *; destruct xx.
-        intro; apply IH, H.
-      Qed.
+      intros hyp a; specialize (hyp a).
+      simpl in a, hyp |- *. destruct (x a) as [C z].
+      destruct hyp as [a' hyp]. exists a'.
+      apply IH; auto.
+    Qed.
 
-    Lemma eq_le:
-      (∀a, ∃b, f a ≤ g b) → (∀b, ∃a, g b ≤ f a) → (sup⁺ f == sup⁺ g)%Ω.
-    Proof. easy. Qed.
-
-    Lemma eq_eq:
-      (∀a, ∃b, f a == g b) → (∀b, ∃a, g b == f a) → (sup⁺ f == sup⁺ g)%Ω.
+    Lemma lt_le (o: Ord): ∀ [A] (x: A → Ord), (∃ a, o ≤ x a) ↔ o < ssup x.
     Proof.
-      intros H1 H2.
-      pose proof (H1' := all_ex_conj_left _ _ H1); simpl in H1'.
-      pose proof (H2' := all_ex_conj_left _ _ H2); simpl in H2'.
-      apply eq_le; assumption.
-      Qed.
+      induction o as [A' f' IH].
+      split.
+      intros [a H]. exists a.
+      simpl in H |- *; destruct (x a).
+      intro. apply IH, H.
+    Qed.
+
+    Lemma eq_le `(x: A → Ord) `(y: B → Ord):
+      (∀ a, ∃ b, x a ≤ y b) → (∀ b, ∃ a, y b ≤ x a) → eq (ssup x) (ssup y).
+    Proof @conj _ _.
+
+    Lemma eq_eq `(x: A → Ord) `(y: B → Ord):
+      (∀ a, ∃ b, x a == y b) → (∀ b, ∃ a, y b == x a) → eq (ssup x) (ssup y).
+    Proof. firstorder. Qed.
 
   End Reduction_Lemmata.
 
 
   Section Order_Properties.
 
-    #[export]
-    Instance lt_sub_le: subrelation lt le.
+    Open Scope equiv_scope.
+
+    #[export] Instance lt_sub_le: subrelation lt le.
     Proof.
-      red; fix ϕ 1. intros [] [] []; eexists; eauto.
+      unfold subrelation; fix Fix 1.
+      destruct x, y, 1; eexists; eauto.
     Qed.
 
-    #[export]
-    Instance lt_irrefl: Irreflexive lt.
+    #[export] Instance le_preorder: PreOrder le.
     Proof.
-      intro x; induction x. firstorder.
+      split; autounfold.
+      fix Fix 1.
+      - destruct x; intro a; now exists a.
+      - destruct x, y, z; intros H1 H2 a.
+        edestruct H1, H2. eauto.
     Qed.
 
-    #[export]
-    Instance lt_trans: Transitive lt.
+    #[export] Instance lt_strorder: StrictOrder lt.
     Proof.
-      unfold Transitive; fix ϕ 1.
-      intros [] [] [] [] [].
-      eexists; eauto.
-    Qed.
-    Arguments lt_trans [_ _ _] _ _.
-
-    #[export]
-    Instance le_refl: Reflexive le.
-    Proof.
-      intro x; induction x. firstorder.
+      split; autounfold.
+      fix Fix 1.
+      - destruct x, 1; firstorder.
+      - destruct x, y, z, 1, 1.
+        eexists; eauto.
     Qed.
 
-    #[export]
-    Instance le_trans: Transitive le.
+    #[export] Instance eq_equiv: Equivalence eq.
     Proof.
-      unfold Transitive; fix ϕ 1.
-      intros [A f] [B g] [C h]; simpl; intros H₁ H₂.
-      intro a;
-        specialize (H₁ a) as [b H₁];
-        specialize (H₂ b) as [c H₂];
-        exists c.
-      eauto.
-    Qed.
-    Arguments le_trans [_ _ _] _ _.
-
-    #[export]
-    Instance eq_refl: Reflexive eq.
-    Proof λ o, conj (le_refl o) (le_refl o).
-
-    #[export]
-    Instance eq_sym: Symmetric eq.
-    Proof λ o o', proj1 (and_comm (o ≤ o') (o ≥ o')).
-    Arguments eq_sym [_ _] _.
-
-    #[export]
-    Instance eq_trans: Transitive eq.
-    Proof λ x y z E₁ E₂,
-            let (LE₁, GE₁) := E₁ in
-            let (LE₂, GE₂) := E₂ in
-            conj (le_trans LE₁ LE₂) (le_trans GE₂ GE₁).
-    Arguments eq_trans [_ _ _] _ _.
-
-    #[export]
-    Instance lt_strorder: StrictOrder lt := Build_StrictOrder _ _ _.
-
-    #[export]
-    Instance eq_equiv: Equivalence eq := Build_Equivalence _ _ _ _.
-
-    #[export]
-    Instance le_preorder: PreOrder le := Build_PreOrder _ _ _.
-
-    #[export]
-    Instance le_partorder: PartialOrder eq le := reflexivity _.
-
-    Fixpoint lt_le_trans [x y z]: x < y -> y ≤ z -> x < z.
-    Proof.
-      destruct x, y, z.
-      intros [b H₁] H₂; specialize (H₂ b) as [c H₂].
-      exists c; eauto.
-    Qed.
-  
-    Fixpoint le_lt_trans [x y z]: x ≤ y -> y < z -> x < z.
-    Proof.
-      destruct x, y, z.
-      intros H₁ [c H₂].
-      exists c; firstorder.
+      firstorder using le_preorder.
     Qed.
 
-    #[export]
-    Instance lt_le_compat: Proper (le --> le ++> impl) lt.
+    #[export] Instance le_partial_order: PartialOrder eq le.
     Proof.
-      repeat intro.
-      eapply le_lt_trans, lt_le_trans; eassumption.
+      now_show (eq === relation_conjunction le (flip le)).
+      reflexivity.
     Qed.
 
-    #[export]
-    Instance lt_compat: Proper (eq ==> eq ==> iff) lt.
+    #[export] Instance lt_le_compat: Proper (le --> le ++> impl) lt.
     Proof.
-      repeat intro.
-      split; destruct H, H0; intro.
-      eapply le_lt_trans, lt_le_trans; eassumption.
-    Qed.
-
-    #[export]
-    Instance le_compat: Proper (eq ==> eq ==> iff) le.
-    Proof. solve_proper. Qed.
-
-    #[export]
-    Instance apart_irrefl: Irreflexive apart.
-    Proof λ x H, or_ind (lt_irrefl x) (lt_irrefl x) H.
-
-    #[export]
-    Instance apart_sym: Symmetric apart.
-    Proof λ x y, or_ind (λ Lxy, or_intror Lxy) (λ Lyx, or_introl Lyx).
-
-    #[export]
-    Instance apart_proper: Proper (eq ==> eq ==> iff) apart.
-    Proof.
-      intros x y E x' y' E'.
-      split; intro.
-      destruct H; [left | right].
-      try now rewrite <- E, <- E'.
-      try now rewrite -> E, -> E'.
-    Qed.
-
-    #[export]
-    Instance setoid: Setoid Ord := Build_Setoid _.
-  
-  End Order_Properties.
-    
-
-  Section Strict_Sup_Properties.
-
-    Variable A: Type.
-
-    #[export]
-    Instance strict_sup_le_covariant: Proper (pointwise_relation A le ==> le) sup⁺.
-    Proof. firstorder. Qed.
-
-    #[export]
-    Instance strict_sup_compat: Proper (pointwise_relation A eq ==> eq) sup⁺.
-    Proof. firstorder. Qed.
-  
-    Property strict_sup_property (f: A → Ord):
-        Minimal (λ o: Ord, ∀ a, f a < o) (sup⁺ f).
-    Proof.
-      split.
-      - intros; apply lt_le; now eexists.
-      - intro; apply le_lt.
+      autounfold. fix Fix 1.
+      intros [A x] [B y] Le [A' x'] [B' y'] Le'.
+      unfold flip; simpl in *.
+      intros (a', Lt). specialize (Le' a') as (b', Le').
+      exists b'. intro b. specialize (Le b) as (a, Le).
+      specialize (Lt a).
+      eapply Fix; eassumption.
     Qed.
     
-    Lemma compose_le:
-      ∀ B (f: A → B) (g: B → Ord), sup⁺ (g ∘ f) ≤ sup⁺ g.
+    #[export] Instance lt_compat: Proper (eq ==> eq ==> iff) lt.
     Proof.
-      intros until a; now exists (f a).
+      apply (proper_sym_impl_iff_2 _ _).
+      firstorder using lt_le_compat.
     Qed.
 
-  End Strict_Sup_Properties.
-
-
-  Section More_Order_Properties.
-
-    #[export]
-    Instance lt_wf: WellFounded lt.
+    #[export] Instance lt_wf: well_founded lt.
     Proof.
       intro x. enough (∀ (y: Ord) (H: y ≤ x), Acc lt y).
       { apply H; reflexivity. }
@@ -306,32 +204,57 @@ Module Ord <: EqLtLe' <: StrOrder.
       intro; constructor; intros z H'.
       apply lt_le in H'. destruct H' as [b H'].
       specialize (H b) as [a H].
-      apply (IH a). transitivity (g b); assumption.
+      apply (IH a). etransitivity; eassumption.
     Qed.
 
-    #[export]
-    Instance lt_we: WeaklyExtensional eq lt.
+    #[export] Instance lt_ext: Extensional eq lt.
     Proof.
+      enough (WeaklyExtensional eq lt) by exact _.
       intros x y H; split.
       induction x as [A f IH], y as [B g]. simpl.
-      - intro a. apply lt_le.
-        destruct (strict_sup_property f).
-        exact (proj1 (H (f a)) (minimal_property a)).
-      - intro b. apply lt_le.
-        destruct (strict_sup_property g).
-        exact (proj2 (H (g b)) (minimal_property b)).
+      intro x. apply lt_le, H, le_lt; reflexivity.
     Qed.
 
-    #[export]
-    Instance lt_wo: WellOrder eq lt := Build_WellOrder _ _ _.
+    #[export] Instance lt_wo: WellOrder eq lt := { }.
 
-  End More_Order_Properties.
+    #[export] Instance setoid: Setoid Ord := { }.
+
+  End Order_Properties.
+    
+
+  Section Strict_Supremum.
+
+    Variable A: Type.
+
+    #[export]
+    Instance ssup_covariance:
+      Proper (pointwise_relation A le ++> le) ssup.
+    Proof. firstorder. Qed.
+
+    #[export]
+    Instance ssup_compat:
+      Proper (pointwise_relation A eq ==> eq) ssup.
+    Proof. firstorder. Qed.
+
+    Property lt_ssup (x: A → Ord): ∀ a, x a < ssup x.
+    Proof.
+      apply le_lt; reflexivity.
+    Qed.
+  
+    Property ssup_minimal (x: A → Ord): ∀ s, (∀ a: A, x a < s) ↔ ssup x ≤ s.
+    Proof.
+      intro; apply le_lt.
+    Qed.
+    
+    Lemma compose_le `(x: B → Ord) (f: A → B): ssup (x ∘ f) ≤ ssup x.
+    Proof.
+      intro a; exists (f a). reflexivity.
+    Qed.
+
+  End Strict_Supremum.
 
 
   Section Propriety.
-
-    #[local] Open Scope signature_scope.
-
 
     Variable Q: ∀ A, (A → Ord) → Prop.
     Let P (o: Ord) := Q (src_map o).
@@ -343,17 +266,17 @@ Module Ord <: EqLtLe' <: StrOrder.
       Proper (pointwise_relation A eq ==> iff) (@Q A).
     Proof.
       intros x y H.
-      now apply strict_sup_compat, proper in H.
+      now apply ssup_compat, proper in H.
     Qed.
 
     Theorem source_irrelevance (o: Ord):
-    ∀ A (f: A → Ord), sup⁺ f == o → Q f → P o.
+    ∀ A (f: A → Ord), ssup f == o → Q f → P o.
     Proof.
       intros A f Eq. now rewrite <- Eq.
     Qed.
 
     Theorem source_irrelevance_inv (o: Ord):
-    P o → ∀ A (f: A → Ord), sup⁺ f == o → Q f.
+    P o → ∀ A (f: A → Ord), ssup f == o → Q f.
     Proof.
       intros H A f Eq. now rewrite <- Eq in H.
     Qed.
@@ -363,122 +286,109 @@ Module Ord <: EqLtLe' <: StrOrder.
 
   Section Zero.
 
-    Definition zero: Ord := sup⁺ empty_map.
+    Definition zero: Ord := ssup (Empty_set_rect _).
 
     Property zero_le: ∀ x: Ord, zero ≤ x.
-    Proof.
-      intro; apply le_lt; tauto.
-    Qed.
-
-    #[export] Instance zero_minimal: Minimal (const ⊤) zero.
-    Proof.
-      split; auto using zero_le.
-    Qed.
+    Proof λ x, Empty_set_ind _.
 
     Definition zero_unique z: (∀ x, z ≤ x) -> z == zero.
-    Proof.
-      firstorder using zero_minimal.
-    Qed.
+    Proof λ h, conj (h zero) (zero_le z).
   
-    Property le_zero_is_zero w: w ≤ zero -> w == zero.
-    Proof λ H, conj H (zero_le w).
+    Property le_zero_is_zero x: x ≤ zero -> x == zero.
+    Proof λ h, conj h (zero_le x).
   
     Property nlt_zero: ∀ w, ¬(w  < zero).
     Proof.
       intros [] []; contradiction.
     Qed.
 
-    Property zero_empty [A] (f: A → t):
-      sup⁺ f == zero ↔ ¬inhabited A.
-    Proof.
-      split.
-      - intros [H _] [a].
-        destruct (H a); contradiction.
-      - intro H. apply empty_notT in H.
-        apply le_zero_is_zero.
-        intro a; contradiction.
-      Qed.
+    Definition lt_zero_exfalso {P: Ord -> Type} w: w < zero → P w :=
+      λ h, False_rect (P w) (nlt_zero w h).
 
-    Property positive_inhabited [A] (f: A → t):
-      sup⁺ f > zero ↔ inhabited A.
+    Property zero_empty w: w == zero ↔ ¬inhabited (src w).
+    Proof.
+      destruct w as (A, x); simpl. split.
+      - intros [H _] [a]. now destruct (H a).
+      - intro N. apply le_zero_is_zero, le_lt.
+        intro a; now contradict N.
+    Qed.
+
+    Property positive_inhabited w: w > zero ↔ inhabited (src w).
     Proof.
       split; intros [a].
       - auto.
       - exists a; intros [].
     Qed.
 
-    Property nonzero_nonempty [A] (f: A -> t):
-      sup⁺ f =/= zero ↔ ¬¬inhabited A.
+    Property nonzero_nonempty w: w =/= zero ↔ ¬¬inhabited (src w).
     Proof.
       split. intros H H'.
-      apply (zero_empty f) in H'.
+      apply (zero_empty w) in H'.
       contradiction.
     Qed.
 
   End Zero.
 
-  #[global] Notation "0" := zero: Ord_scope.
+  #[export] Hint Resolve zero_le: ord.
+  #[export] Hint Resolve zero_unique: ord.
+  #[export] Hint Resolve le_zero_is_zero: ord.
+  #[export] Hint Resolve nlt_zero: ord.
+  #[export] Hint Resolve <- zero_empty: ord.
+  #[export] Hint Resolve <- positive_inhabited: ord.
+  #[export] Hint Resolve <- nonzero_nonempty: ord.
 
 
   Section Successor.
     (** The successor operation and its basic properties. *)
 
-    Definition succ (o: Ord): Ord := sup⁺ (λ _:unit, o).
+    Definition succ (o: Ord): Ord := ssup (λ _:unit, o).
 
     #[export]
-    Instance succ_lt_covariant: Proper (lt ++> lt) succ.
+    Instance succ_strict_covariance: Proper (lt ++> lt) succ.
     Proof.
       repeat intro; simpl; repeat elim_quantifiers.
       assumption.
     Qed.
 
     #[export]
-    Instance succ_le_covariant: Proper (le ==> le) succ.
+    Instance succ_covariance: Proper (le ==> le) succ.
     Proof.
-      repeat intro; simpl; repeat elim_quantifiers.
-      assumption.
+      unfold succ; solve_proper.
     Qed.
 
     #[export]
     Instance succ_compat: Proper (eq ==> eq) succ.
     Proof.
-      repeat intro; destruct H; split.
-      simpl in *; repeat elim_quantifiers.
-      assumption.
+      unfold succ; solve_proper.
     Qed.
 
-    #[export]
-    Instance succ_property (o: Ord): Minimal (lt o) (succ o).
+    Property lt_succ o:  o < succ o.
     Proof.
-      split.
-      - apply lt_le; exists tt; reflexivity.
-      - intros; apply le_lt; intro; assumption.
+      apply -> lt_le. exists tt; reflexivity.
     Qed.
 
-    Definition succ_unique (o: Ord) := Minimal_unique (succ_property o).
-    
-    Property succ_le_iff_lt: forall x y, succ x ≤ y ↔ x < y.
+    Property succ_minimality o: ∀ s, o < s ↔ succ o ≤ s.
     Proof.
-      intros; split.
-      - intro; apply le_lt in H; [assumption | constructor].
-      - apply succ_property.
+      split; intros.
+      - apply -> le_lt; auto.
+      - apply <- le_lt in H; auto using tt.
     Qed.
 
-    Property le_iff_lt_succ: forall x y, x ≤ y ↔ x < succ y.
+    Property le_iff_lt_succ x y: x ≤ y ↔ x < succ y.
     Proof.
       intros; split; intro H.
       - apply -> lt_le; repeat constructor; assumption.
       - apply <- lt_le in H; destruct H; assumption.
     Qed.
 
-    Property succ_lt_inv: ∀ x y, succ x < succ y → x < y.
+    Property succ_lt_inv x y: succ x < succ y → x < y.
     Proof.
-      intros; now apply succ_le_iff_lt, le_iff_lt_succ.
+      intros; now apply succ_minimality, le_iff_lt_succ.
     Qed.
 
     Property succ_le_inv: ∀ x y, succ x ≤ succ y → x ≤ y.
     Proof.
-      intros; now apply le_iff_lt_succ, succ_le_iff_lt.
+      intros; now apply le_iff_lt_succ, succ_minimality.
     Qed.
 
     Property succ_inj: ∀ x y, succ x == succ y → x == y.
@@ -488,124 +398,238 @@ Module Ord <: EqLtLe' <: StrOrder.
   
   End Successor.
 
-  #[global] Notation "'S'" := Ord.succ: Ord_scope.
+  #[export] Hint Resolve lt_succ: ord.
+  #[export] Hint Resolve -> succ_minimality: ord.
+  #[export] Hint Resolve -> le_iff_lt_succ: ord.
+  #[export] Hint Rewrite <- lt_succ: ord.
+  #[export] Hint Rewrite <- succ_minimality: ord.
 
 
   Section Limit_and_Successor_Ordinals.
     
-    Definition Is_successor (o: Ord) :=  ∃ p: Ord, S p == o.
+    Definition Is_successor (o: Ord) := ∃ p, succ p == o.
 
-    Definition Is_limit (o: Ord) := ∀ p: Ord, S p =/= o.
+    Definition Is_limit (o: Ord) := ∀ p, p < o → succ p < o.
 
     #[export]
     Instance: Proper (eq ==> iff) Is_successor.
     Proof.
-      intros x y E; split.
-      intros [p H]. exists p. rewrite H.
-      2: symmetry.
-      exact E.
+      unfold Is_successor; solve_proper.
     Qed.
 
     #[export]
     Instance: Proper (eq ==> iff) Is_limit.
     Proof.
-      split. unfold Is_limit. intros.
-      1: rewrite <- H. 2: rewrite -> H.
-      apply H0.
+      unfold Is_limit; solve_proper.
     Qed.
 
     (** Constructively we cannot prove every ordinal is either a
      successor or a limit ordinal, but we can prove the following. *)
 
     Fact limit_nand_successor (o: Ord): ¬(Is_limit o ∧ Is_successor o).
-    Proof. firstorder. Qed.
-
-    Fact nn_limit_or_successor (o: Ord): ¬¬(Is_limit o ∨ Is_successor o).
-    Proof. firstorder. Qed.
-
-    Fact not_successor_is_limit (o: Ord): ¬Is_successor o → Is_limit o.
-    Proof. firstorder. Qed.
-
-    (** An ordinal is a successor just if every map into the ordinals
-    specifying it has a maximal element. *)
-
-    Lemma successor_iff_max (o: Ord):
-      Is_successor o ↔ ∀ I (w: I → Ord),
-        sup⁺ w == o → ∃ i: I, ∀ i': I, w i ≥ w i'.
     Proof.
+      intros [H [p H']]. rewrite <- H' in H. clear dependent o.
+      pose proof (H'' := lt_succ p).
+      specialize (H p H''). contradict H. apply irreflexivity.
+    Qed.
+
+    Fact not_successor_is_limit (o: Ord) : ¬Is_successor o → Is_limit o.
+    Proof.
+      intros H p L.
+      assert (Hp: succ p =/= o) by firstorder.
+      give_up.
+    Abort.
+    (* Is this even true constructively? *)
+      
+
+    (** An ordinal is a successor iff every map into the ordinals
+    specifying it has a maximal element, iff any map does so. *)
+
+    Lemma successor_max (o: Ord):
+      Is_successor o →
+      ∀ `(x: A → Ord), ssup x == o → ∃ μ: A, ∀ a: A, x μ ≥ x a.
+    Proof.
+      intros [o' s] I x Eq.
+      rewrite <- Eq in s; clear dependent o.
+      specialize (proj1 s tt) as [i s1];
+      specialize (proj2 s i) as [[] s2];
+      pose proof (Eq' := conj s1 s2: o' == x i); clear s1 s2.
+      rewrite -> Eq' in s.
+      exists i. firstorder.
+    Qed.
+
+    Lemma max_successor (o: Ord) `(x: A → Ord) (Eq: ssup x == o):
+      (∃ μ: A, ∀ a: A, x μ ≥ x a) → Is_successor o.
+    Proof.
+      intros [μ M]. exists (x μ).
+      rewrite <- Eq; clear dependent o.
       split.
-      - intros [o' s] I w Eq.
-        rewrite <- Eq in s; clear Eq o.
-        specialize (proj1 s tt) as [i s1];
-        specialize (proj2 s i) as [[] s2];
-        pose proof (Eq' := conj s1 s2: o' == w i); clear s1 s2.
-        rewrite -> Eq' in s; clear Eq' o'.
-        exists i.
-        destruct s as [s1 s2]; simpl in *; elim_quantifiers.
-        intro i'; specialize (s2 i') as [[] s2]. assumption.
-      - intros; destruct o.
-        specialize (H A f (reflexivity _)) as [a H].
-        unfold Is_successor.
-        exists (f a). split; simpl; elim_quantifiers.
-        + exists a; reflexivity.
-        + intro; exists tt; apply H.
+      - intros []; exists μ; reflexivity.
+      - intro a; exists tt; apply M.
     Qed.
   
   End Limit_and_Successor_Ordinals.
-      
 
 
-  Section Ordinality.
+  Section From_WF.
     (** Mapping of other sets with well-founded relations into the ordinals *)
     
-    Context `{WellFounded A R}.
+    Variable A: Type.
+    Variable R: relation A.
+    Context {Rwf: well_founded R}.
+    Local Infix "≺" := R (at level 70).
 
-    Definition inj: A → Ord :=
-      wf_recursive
-        (λ (a: A) (ih: ∀ x: A, R x a → Ord),
-          let f: {x | R x a} → Ord := sig_apply ih
-            in sup⁺ f).
+    Let fwf (a: A) (ih: ∀ x: A, x ≺ a → Ord): Ord :=
+        @ssup {y | y ≺ a} (sig_apply ih).
 
-    Global Instance inj_covariant: Proper (R ==> lt) inj.
+    Definition from_wf := Fix Rwf _ fwf : A → Ord.
+
+    Local Lemma fwf_ext (a: A) (f g: ∀ y, y ≺ a → Ord) :
+      (∀ (y:A) (p: y ≺ a), f y p == g y p) -> fwf f == fwf g.
     Proof.
-      (* Not sure how to prove this! *)
-    Abort.
+      intro H. apply eq_eq.
+      intro y; exists y. destruct y.
+      2: symmetry.
+      apply H.
+    Qed.
+
+    Local Lemma fwf_inv (x: A):
+      ∀ (r s: Acc R x), Fix_F _ fwf r == Fix_F _ fwf s.
+    Proof.
+      induction (Rwf x); intros.
+      rewrite <-! Fix_F_eq.
+      apply fwf_ext.
+      auto.
+    Qed.
     
-  End Ordinality.
+    Property from_wf_eq a:
+      from_wf a == ssup (λ y: {y | y ≺ a}, from_wf (proj1_sig y)).
+    Proof.
+      change (ssup _) with (fwf (λ y (_: y ≺ a), from_wf y)).
+      unfold from_wf, Fix. rewrite <- Fix_F_eq.
+      apply fwf_ext. intros. apply fwf_inv.
+    Qed.
+
+    Global Instance from_wf_strict_covariance: Proper (R ==> lt) from_wf.
+    Proof.
+      intros x y p. rewrite -> (from_wf_eq y).
+      exact (lt_ssup _ (exist _ x p)).
+    Qed.
+
+    Context `{equivA: Equivalence A eqA}.
+    Context {R_compat: Proper (eqA ==> eqA ==> iff) R}.
+    Local Infix "=" := eqA: type_scope.
+
+    Global Instance from_wf_compat: Proper (eqA ==> eq) from_wf.
+    Proof.
+      intros x y e. rewrite ->! from_wf_eq.
+      apply eq_eq.
+      intros [z r].
+      pose (r' := r).
+      apply (R_compat (reflexivity z) e) in r'.
+      exists (exist _ z r'). reflexivity.
+    Qed.
+
+    Context {Rtrans: Transitive R}.
+
+    Property from_wf_inv_covariance: ∀ x y, from_wf x < from_wf y → x ≺ y.
+    Proof.
+      intros x y Lt. induction y as [y IH] using wf_ind.
+      rewrite -> (from_wf_eq y) in Lt.
+      apply lt_le in Lt as [[y' r] Le]. cbn in Le.
+      refine (transitivity _ r).
+      specialize (IH y' r).
+      apply IH.
+      (* doesn't seem to quite work... *)
+      change (from_wf x ≤ from_wf y') in Le.
+      now_show (from_wf x < from_wf y').
+    Abort.
+
+    Hypothesis Rwext: WeaklyExtensional eqA R.
+
+    Property from_wf_inj: ∀ x y, from_wf x == from_wf y → x = y.
+    Proof.
+      induction y as [y IH] using wf_ind. intro Eq.
+      apply weak_extensionality. intro t; split.
+    Abort.
+      
+  End From_WF.
 
 
   Section From_Nat.
     (** Mapping of the natural numbers into the finite ordinals. *)
+    Local Open Scope signature_scope.
 
-    Definition from_nat (n: Nat.t): Ord := Nat.iter n S 0.
+    #[export] Instance from_wf_nat_covariance:
+      Proper (Peano.le ==> le) (from_wf (R := Peano.lt)).
+    Proof.
+      intros m n h.
+      apply le_lt_eq_dec in h; destruct h.
+      - apply lt_sub_le, from_wf_strict_covariance. assumption.
+      - destruct e. reflexivity.
+    Qed.
+
+    Lemma from_wf_0: from_wf 0 == zero.
+    Proof.
+      rewrite -> from_wf_eq.
+      apply zero_empty. intros [[x lt]].
+      contradict lt. auto with arith.
+    Qed.
+
+    Lemma from_wf_S (n: nat): from_wf (S n) == succ (from_wf n).
+    Proof.
+      unfold succ. rewrite -> from_wf_eq. simpl.
+      apply eq_le.
+      - intros [m l]. exists tt. simpl.
+        apply from_wf_nat_covariance; auto with arith.
+      - intro. assert (l: (n < S n)%nat) by auto.
+        now exists (exist _ n l).
+    Qed.
+
+    Definition from_nat (n: nat): Ord := Nat.iter n succ zero.
+
+    Proposition from_wf_is_from_nat:
+      pointwise_relation _ eq (from_wf (R := Peano.lt)) from_nat.
+    Proof.
+      intro n; induction n.
+      - apply from_wf_0.
+      - simpl. rewrite <- IHn. apply from_wf_S.
+    Qed.
+
+    Lemma from_nat_src (n: nat): (0 < n)%nat → unit = src (from_nat n) :> Type.
+    Proof.
+      intro H. rewrite <- (Nat.succ_pred_pos _ H). reflexivity.
+    Qed.
+
+    Lemma from_nat_src_0 (n: nat): ∅ = src (from_nat 0) :> Type.
+    Proof.
+      reflexivity.
+    Qed.
 
     #[export]
     Instance from_nat_compat: Proper (Logic.eq ==> eq) from_nat := _.
 
     #[export]
-    Instance from_nat_lt_covariant: Proper (Peano.lt ==> lt) from_nat.
+    Instance from_nat_strict_covariace: Proper (Peano.lt ==> lt) from_nat.
     Proof.
-      intros m n Hyp; induction n.
-      - contradict Hyp; auto with arith.
-      - inversion_clear Hyp; simpl.
-        + apply succ_property.
-        + rewrite <- (succ_property _).(minimal_property).
-          auto.
+      repeat intro.
+      rewrite <- from_wf_is_from_nat.
+      apply from_wf_strict_covariance, H.
     Qed.
 
     #[export]
-    Instance from_nat_le_covariant: Proper (Peano.le ==> le) from_nat.
+    Instance from_nat_covariance: Proper (Peano.le ==> le) from_nat.
     Proof.
-      intros m n Hyp.
+      intros m n m_le_n.
       induction m, n as [n | m | m n IH] using nat_double_ind.
       - (* 0, n *) apply zero_le.
-      - (* S m, 0 *) contradict Hyp; auto with arith.
+      - (* S m, 0 *) exfalso. inversion m_le_n.
       - (* S m, S n *)
         simpl; repeat elim_quantifiers.
         apply IH. auto with arith.
     Qed.
     
-    Property from_nat_le_inv m n: from_nat m ≤ from_nat n → m <= n.
+    Property from_nat_le_inv m n: (from_nat m ≤ from_nat n)%nat → m <= n.
     Proof.
       induction m, n as [n | m | m n IH] using nat_double_ind.
       simpl; intro H; repeat elim_quantifiers.
@@ -619,80 +643,109 @@ Module Ord <: EqLtLe' <: StrOrder.
     Qed.
 
   End From_Nat.
-
   
-  Section Indexed_Join.
+
+  Section Supremum.
 
     Section Def.
       Context {I: Type}.
-      Variable w: I → Ord.
+      Variable x: I → Ord.
 
-      Definition Is_supremum (j: Ord) := ∀ i: I, w i ≤ j.
-      Hint Unfold Is_supremum: ord.
+      Let Smap (j: {i:I & src (x i)}) : Ord :=
+        let (i, a) := j in src_map (x i) a.
 
-      Let J: Type := {i & src (w i)}.
-      Let ϕ: J → Ord := λ x, let (i, x) := x in src_map (w i) x.
+      Definition sup: Ord := ssup Smap.
 
-      Definition Join: Ord := sup⁺ ϕ.
-
-      Let Φ := λ j, ∀ i, w i ≤ j.
-      Local Hint Unfold Φ: core.
-
-      #[export]
-      Instance Join_property: Minimal Is_supremum Join.
+      Property sup_property: ∀ i: I, x i ≤ sup.
       Proof.
-        split.
-        - intro i; now_show (w i ≤ Join).
-          destruct (w i) eqn: E.
-          intro a.
-          change (src (sup⁺ f)) in a.
-          exists (existT _ i (eq_rect _ _ a _ (symmetry E))).
-          subst ϕ; simpl; rewrite -> E. reflexivity.
-        - intros j H; now_show (Join ≤ j).
-          destruct j eqn: E.
-          apply le_lt. now_show (∀ a, ϕ a < sup⁺ f).
-          intros (i, x).
-          eapply lt_le_trans. 2: exact (H i).
-          subst ϕ; simpl.
-          destruct (w i). apply strict_sup_property.
+        intro i. destruct (x i) as [A f] eqn: E.
+        intro a.
+        exists (existT _ i (eq_rect _ _ a _ (symmetry E))).
+        simpl. rewrite -> E. reflexivity.
       Qed.
 
-      Definition Join_unique := Minimal_unique Join_property.
-
-      Corollary Join_max (i: I): Is_supremum (w i) → Join == w i.
-      Proof.
-        split; now apply Join_property.
+      Property sup_minimality: ∀ s, (forall i, x i ≤ s) → sup ≤ s.
+        intros s H. destruct s eqn: E.
+        apply le_lt.
+        intros [i a]. rewrite <- (H i).
+        simpl. destruct (x i). apply lt_ssup.
       Qed.
+
     End Def.
 
     #[export]
-    Instance Join_compat {I}: Proper (pointwise_relation I eq ==> eq) Join.
+    Instance sup_compat {I}: Proper (pointwise_relation I eq ==> eq) sup.
     Proof.
-      autounfold with rels. intros w w' H.
-      apply Join_unique.
-      split; unfold Is_supremum.
-      - intro i; specialize (H i). rewrite <- H. apply Join_property. 
-      - intros x H'. setoid_rewrite <- H in H'.
-        now apply Join_property.
+      autounfold. intros o o' H.
+      split. apply sup_minimality. intro i.
+      1: rewrite -> (H i).
+      2: rewrite <- (H i).
+      apply sup_property.
     Qed.
 
-  End Indexed_Join.
-
-  #[global] Notation "⋀ { w | i : I }" := (Join (λ i: I, w)) : Ord_scope.
+  End Supremum.
 
 
-  Section Meet.
+  Section Max.
 
-    (*Variable I: Type.
-    Variable w: I → Ord.
+    Definition max x y: Ord := ssup (sum_rect _ (src_map x) (src_map y)).
 
-    Let M: Type := ∀ i: I, src (w i).*)
+    Property max_ge_L x y: x ≤ max x y.
+    Proof.
+      destruct x, y.
+      intro a; eexists (inl a). reflexivity.
+    Qed.
 
-  End Meet.
+    Property max_ge_R x y: y ≤ max x y.
+    Proof.
+      destruct x, y.
+      intro a; exists (inr a). reflexivity.
+    Qed.
+
+    Definition max_ge x y := conj (max_ge_L x y) (max_ge_R x y).
+
+    Property max_minimality x y: ∀ z, x ≤ z → y ≤ z → max x y ≤ z.
+    Proof.
+      destruct x, y, z; simpl.
+      intros H1 H2 p. destruct p as [a | a].
+      1: destruct (H1 a). 2: destruct (H2 a).
+      eexists; eassumption.
+    Qed.
+
+    Let bmap (x y: Ord) (b: bool) := if b then x else y.
+
+    Corollary max_is_sup: ∀ x y, max x y == sup (bmap x y).
+    Proof.
+      split.
+      - apply max_minimality.
+        pose (S := sup_property (bmap x y)).
+        + exact (S true).
+        + exact (S false).
+      - apply sup_minimality.
+        destruct i; simpl; apply max_ge.
+    Qed.
+  
+    #[export] Instance max_covariance: Proper (le ++> le ++> le) max.
+    Proof.
+      intros [A f] [B g] Le [A' f'] [B' g'] Le'.
+      intro x; destruct x as [a | a].
+      - destruct (Le a) as [x]; now exists (inl x).
+      - destruct (Le' a) as [x]; now exists (inr x).
+    Qed.
+
+    #[export] Instance max_compat: Proper (eq ==> eq ==> eq) max.
+    Proof.
+      do 2 destruct 1; split; now apply max_covariance.
+    Qed.
+
+    #[export] Instance max_strict_covariance: Proper (lt ++> lt ++> lt) max.
+    Proof.
+    Abort.
+  
+  End Max.
 
 End Ord.
 
 #[export] Instance Ord_lt_rewrite: RewriteRelation Ord.lt := {}.
 #[export] Instance Ord_le_rewrite: RewriteRelation Ord.le := {}.
 #[export] Instance Ord_eq_rewrite: RewriteRelation Ord.eq := {}.
-

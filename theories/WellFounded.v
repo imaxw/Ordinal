@@ -13,12 +13,10 @@ Generalizable Variables A P R equal.
 
 Set Implicit Arguments.
 
-
-Class WellFounded `(R: relation A) :=
-  wf: well_founded R.
+Existing Class well_founded.
 
 Class WeaklyExtensional `(equivalence: Equivalence A equal)
-                   (R: relation A) :=
+                         (R: relation A) :=
   weak_extensionality: forall x y, (forall t, R t x <-> R t y) -> equal x y.
     
 Arguments WeaklyExtensional {A} equal {equivalence} R.
@@ -26,7 +24,8 @@ Arguments WeaklyExtensional {A} equal {equivalence} R.
 Class WellOrder `(equivalence: Equivalence A equal)
                  (R: relation A) :=
 {
-  WellOrder_WellFounded :> WellFounded R;
+  WellOrder_Compat :> Proper (equal ==> equal ==> iff) R;
+  WellOrder_WellFounded :> well_founded R;
   WellOrder_Transitive :> Transitive R;
   WellOrder_WeakExtensional :> WeaklyExtensional equal R
 }.
@@ -36,7 +35,7 @@ Arguments WellOrder {A} equal {equivalence} R.
 
 Section Induction_Principles.
 
-  Context `{Rwf: WellFounded A R}.
+  Context `{Rwf: well_founded A R}.
 
   Definition wf_rect := well_founded_induction_type Rwf.
   Definition wf_rec := well_founded_induction Rwf.
@@ -82,8 +81,8 @@ End Induction_Principles.
 
 Section Double_Induction_Principles.
 
-  Context `{Rwf: WellFounded A R}.
-  Context `{Rwf': WellFounded A' R'}.
+  Context `{Rwf: well_founded A R}.
+  Context `{Rwf': well_founded A' R'}.
 
   Definition wf_double_rect (P: A -> A' -> Type):
       (forall x y,
@@ -120,7 +119,7 @@ Section Derived_Instances.
   (** A well-founded relation is necessarily irreflexive. (We give
       this instance low priority because for many such relations
       there will already exist a simpler proof of irreflexivity.) *)
-  Global Instance wf_irrefl `{WellFounded A R}: Irreflexive R | 4.
+  Global Instance wf_irrefl `{well_founded A R}: Irreflexive R | 4.
   Proof.
     intro x. induction x as [x IH] using (well_founded_ind H).
     exact (fun H => IH x H H).
@@ -172,7 +171,7 @@ Section Strong_Extensionality.
   Qed.
 
   Global Instance wf_we_is_se {Rprop: Proper (equal ==> equal ==> iff) R}
-                              {Rwf: WellFounded R}
+                              {Rwf: well_founded R}
                               {Rwe: WeaklyExtensional equal R}:
     Extensional.
   Proof.
@@ -191,11 +190,14 @@ Section Strong_Extensionality.
 
 End Strong_Extensionality.
 
+Arguments Extensional {_} _ _.
+
 
 Global Instance nat_wo: WellOrder eq lt.
 Proof.
   split.
   Require Import Arith_base.
+  - solve_proper.
   - exact lt_wf.
   - exact lt_trans.
   - intros m n H.
@@ -204,3 +206,48 @@ Proof.
     + specialize (proj2 (H _) G). apply irreflexivity.
 Qed.
 
+
+Definition Empty_relation (x y: Empty_set): Prop :=
+  match x with end.
+
+Global Instance Empty_wo: WellOrder eq (fun x _: Empty_set => match x with end).
+Proof.
+  easy.
+Qed.
+
+Global Instance unit_wo: WellOrder eq (fun _ _: unit => False).
+Proof.
+  split; cbv; try easy.
+  now destruct x, y.
+Qed.
+
+Definition sum_equiv `(equal: relation A) `{!Equivalence equal}
+                     `(equal': relation A') `{!Equivalence equal}
+                     (x y: A + A') :=
+  match x, y with
+  | inl a, inl b => equal a b
+  | inl a, inr b => False
+  | inr a, inl b => False
+  | inr a, inr b => equal' a b
+  end.
+Arguments sum_equiv {_} _ {_ _} _ {_}.
+
+Definition sum_prec `(R: relation A) `{!well_founded R}
+                    `(R': relation A') `{!well_founded R'}
+                    (x y: A + A') :=
+  match x, y with
+  | inl a, inl b => R a b
+  | inl a, inr b => True
+  | inr a, inl b => False
+  | inr a, inr b => R' a b
+  end.
+Arguments sum_prec {_} _ {_ _} _ {_}.
+
+Global Instance sum_equivalence `(Equivalence A equal) `(Equivalence A' equal'):
+  Equivalence (sum_equiv equal equal').
+Proof.
+  split; autounfold.
+  - intros [a | a]; simpl; reflexivity.
+  - intros [a | a] [b | b]; simpl; try tauto; now symmetry.
+  - intros [a | a] [b | b] [c | c]; simpl; try tauto; now transitivity b.
+Qed.
