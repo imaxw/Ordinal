@@ -10,11 +10,11 @@
     and are deferred to the OrdClassical module.
 
     Implementation note:
-    A rather more elegant mutually recursive definition of < and <= is
+    A rather more elegant mutually recursive definition of < and ≤ is
     possible, and was originally to be used here:
     - ssup f ≤ y when, for all a:A, f(a) < y; 
     - x < ssup g when, for some b:B, x ≤ g(b). 
-       However, Coq does not accept these as fixpoint definitions since
+      However, Coq does not accept these as fixpoint definitions since
     they descend on different parameters. It does accept them as
     inductive definitions, but this would require them to be redefined
     inside the Ord module, which causes annoying notational issues.
@@ -24,7 +24,7 @@
 
 From Ordinal Require Import CommonHeader WellOrderClass Notations.
 
-Require Import Arith_base.
+Require Arith_base.
 
 Generalizable Variables A B C I J K R X Y Z eqA.
 
@@ -34,11 +34,10 @@ Generalizable Variables A B C I J K R X Y Z eqA.
     greater than every element of the function's range. *)
 
 Inductive Ord := ssup `(x: A → Ord).
-Bind Scope Ord_scope with Ord.
 
 Module Ord <: EqLtLe' <: StrOrder.
 
-  Open Scope Ord_scope.
+  Local Open Scope Ord_scope.
 
   Definition t := Ord.
 
@@ -48,7 +47,7 @@ Module Ord <: EqLtLe' <: StrOrder.
     match o with ssup f => f end.
 
   Fixpoint le o o': Prop :=
-    ∀ a: src o, ∃ a': src o', le (src_map o a) (src_map o' a').
+    ∀ a: src o, ∃ a': src o',le (src_map o a) (src_map o' a').
 
   Fixpoint lt o o': Prop :=
     ∃ a': src o', ∀ a: src o, lt (src_map o a) (src_map o' a').
@@ -89,31 +88,31 @@ Module Ord <: EqLtLe' <: StrOrder.
       (∀ a, ∃ b, x a ≤ y b) ↔ ssup x ≤ ssup y.
     Proof. reflexivity. Qed.
 
-    Lemma le_lt (o: Ord): ∀ [A] (x: A → Ord), (∀ a, x a < o) ↔ ssup x ≤ o.
+    Fixpoint le_lt (o: Ord): ∀ [A] (x: A → Ord), (∀ a, x a < o) ↔ ssup x ≤ o.
     Proof.
-      induction o as [A' x' IH].
+      destruct o as [A' x'].
       split.
       intros hyp a; specialize (hyp a).
-      simpl in a, hyp |- *. destruct (x a) as [C z].
+      simpl in a, hyp |- *. destruct (x a).
       destruct hyp as [a' hyp]. exists a'.
-      apply IH; auto.
+      apply le_lt. auto.
     Qed.
 
-    Lemma lt_le (o: Ord): ∀ [A] (x: A → Ord), (∃ a, o ≤ x a) ↔ o < ssup x.
+    Fixpoint lt_le (o: Ord): ∀ [A] (x: A → Ord), (∃ a, o ≤ x a) ↔ o < ssup x.
     Proof.
-      induction o as [A' f' IH].
+      destruct o as [A' x'].
       split.
-      intros [a H]. exists a.
-      simpl in H |- *; destruct (x a).
-      intro. apply IH, H.
+      intros [a hyp]. exists a.
+      simpl in hyp |- *. destruct (x a).
+      intro. apply lt_le, hyp.
     Qed.
 
     Lemma eq_le `(x: A → Ord) `(y: B → Ord):
-      (∀ a, ∃ b, x a ≤ y b) → (∀ b, ∃ a, y b ≤ x a) → eq (ssup x) (ssup y).
+      (∀ a, ∃ b, x a ≤ y b) → (∀ b, ∃ a, y b ≤ x a) → (ssup x == ssup y)%Ω.
     Proof @conj _ _.
 
     Lemma eq_eq `(x: A → Ord) `(y: B → Ord):
-      (∀ a, ∃ b, x a == y b) → (∀ b, ∃ a, y b == x a) → eq (ssup x) (ssup y).
+      (∀ a, ∃ b, x a == y b) → (∀ b, ∃ a, y b == x a) → (ssup x == ssup y)%Ω.
     Proof. firstorder. Qed.
 
   End Reduction_Lemmata.
@@ -572,7 +571,7 @@ Module Ord <: EqLtLe' <: StrOrder.
       Proper (Peano.le ==> le) (from_wf (R := Peano.lt)).
     Proof.
       intros m n h.
-      apply le_lt_eq_dec in h; destruct h.
+      apply Arith.Compare_dec.le_lt_eq_dec in h; destruct h.
       - apply lt_sub_le, from_wf_strict_covariance. assumption.
       - destruct e. reflexivity.
     Qed.
@@ -604,7 +603,7 @@ Module Ord <: EqLtLe' <: StrOrder.
 
     Lemma from_nat_src (n: nat): (0 < n)%nat → unit = src (from_nat n) :> Type.
     Proof.
-      intro H. rewrite <- (Nat.succ_pred_pos _ H). reflexivity.
+      intro H. rewrite <- (Arith.PeanoNat.Nat.succ_pred_pos _ H). reflexivity.
     Qed.
 
     Lemma from_nat_src_0 (n: nat): ∅ = src (from_nat 0) :> Type.
@@ -797,23 +796,23 @@ Module Ord <: EqLtLe' <: StrOrder.
       eexists; eassumption.
     Qed.
 
-    Section Max_Is_Sup.
-      Let fin_map (x y: Ord) (s: Fin.t 2): Ord :=
-        match s with
-        | Fin.F1 => x
-        | Fin.FS _ => y
-        end.
+    Corollary max_uniqueness x y: ∀ m,
+      x ≤ m → y ≤ m → (∀ z, x ≤ z → y ≤ z → m ≤ z) → max x y == m.
+    Proof.
+      split.
+      - apply max_minimality; assumption.
+      - apply H1; apply max_ge.
+    Qed.
 
-      Proposition max_is_sup: ∀ x y, max x y == sup (fin_map x y).
-      Proof.
-        split.
-        - apply max_minimality.
-          + exact (sup_ge _ Fin.F1).
-          + exact (sup_ge _ (Fin.FS Fin.F1)).
-        - apply sup_minimality.
-          intro s; destruct s. apply max_ge.
-      Qed.
-    End Max_Is_Sup.
+    Proposition max_is_sup x y: max x y == sup (λ b:bool, if b then x else y).
+    Proof.
+      split.
+      - apply max_minimality. 
+        + exact (sup_ge _ true).
+        + exact (sup_ge _ false).
+      - apply sup_minimality.
+        intro b; case b. apply max_ge.
+    Qed.
   
     #[export]
     Instance max_covariance: Proper (le ++> le ++> le) max.
@@ -835,6 +834,34 @@ Module Ord <: EqLtLe' <: StrOrder.
     Proof.
       intros x y lt.
     Abort.
+
+    Property max_idempotence x: max x x == x.
+    Proof.
+      destruct x as [A f]; apply eq_eq.
+      - intros [a | a]; now exists a.
+      - intro a; now exists (inl a).
+    Qed.
+
+    Property max_sym x y: max x y == max y x.
+    Proof.
+      apply eq_eq. intros [a | a].
+      1, 3: exists (inr a). 3, 4: exists (inl a).
+      reflexivity.
+    Qed.
+
+    Property max_eq_L x y: x ≥ y ↔ max x y == x.
+    Proof.
+      split.
+      - split.
+        + rewrite <- H; apply max_idempotence.
+        + apply max_ge.
+      - intro H; rewrite <- H; apply max_ge.
+    Qed.
+
+    Property max_eq_R x y: x ≤ y ↔ max x y == y.
+    Proof.
+      rewrite max_sym. apply max_eq_L.
+    Qed.
   
   End Pairwise_Maximum.
 
@@ -867,6 +894,10 @@ Module Ord <: EqLtLe' <: StrOrder.
 
 End Ord.
 
-#[export] Instance Ord_lt_rewrite: RewriteRelation Ord.lt := {}.
-#[export] Instance Ord_le_rewrite: RewriteRelation Ord.le := {}.
-#[export] Instance Ord_eq_rewrite: RewriteRelation Ord.eq := {}.
+#[global] Bind Scope Ord_scope with Ord Ord.t.
+
+#[export] Instance Ord_eq_rewrite: RewriteRelation Ord.eq | 0 := {}.
+#[export] Instance Ord_lt_rewrite: RewriteRelation Ord.lt | 1 := {}.
+#[export] Instance Ord_le_rewrite: RewriteRelation Ord.le | 1 := {}.
+#[export] Instance Ord_gt_rewrite: RewriteRelation Ord.lt | 2 := {}.
+#[export] Instance Ord_ge_rewrite: RewriteRelation Ord.ge | 2 := {}.
