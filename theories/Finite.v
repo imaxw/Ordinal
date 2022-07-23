@@ -10,15 +10,18 @@ Section Finiteness.
 
   (* This is in Type instead of Prop because we want to eliminate it
      to extract a witness *)
-  Inductive Finite: t → Type :=
+  Inductive Finite: Ord → Type :=
   | finite_zero: Finite zero
   | finite_succ w: Finite w → Finite (succ w)
   | finite_eq w w': w == w' → Finite w → Finite w'.
 
+  Existing Class Finite.
+  Existing Instance finite_zero.
+  Existing Instance finite_succ.
+  Existing Instance finite_eq.
+
   (* Uninformative variant, if you really want it *)
   Variant Is_Finite: Ord → Prop := finite_witness w: Finite w → Is_Finite w.
-
-  Existing Class Finite.
 
   #[export] Instance finite_proper: Proper (eq ==> iff) Is_Finite.
   Proof.
