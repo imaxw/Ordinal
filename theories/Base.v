@@ -26,7 +26,7 @@ From Ordinal Require Import CommonHeader WellOrderClass Notations.
 
 Require Arith_base.
 
-Generalizable Variables A B C I J K R X Y Z eqA.
+Generalizable All Variables.
 
 
 (** An ordinal is represented by the image of a (possibly empty) function
@@ -214,6 +214,23 @@ Module Ord <: EqLtLe' <: StrOrder.
 
     #[export] Instance pointwise_lt_sub_le [A]:
     subrelation (pointwise_relation A lt) (pointwise_relation A le) := _.
+    
+    #[export] Instance unary_covariant_is_proper (op: Ord → Ord):
+      Proper (le ==> le) op → Proper (eq ==> eq) op.
+    Proof. firstorder. Qed.
+
+    #[export] Instance binop_covariant_proper (op: Ord → Ord → Ord):
+      Proper (le ==> le ==> le) op → Proper (eq ==> eq ==> eq) op.
+    Proof. firstorder. Qed.
+
+    #[export] Instance pointwise_covariant_is_proper [A] (op: (A → Ord) → Ord):
+      Proper (pointwise_relation A le ==> le) op →
+      Proper (pointwise_relation A eq ==> eq) op.
+    Proof.
+      intros covariant x y E. pose proof (E' := symmetry E).
+      apply pointwise_eq_sub_le in E, E'.
+      split; auto.
+    Qed.
 
   End Order_Properties.
     
@@ -223,14 +240,11 @@ Module Ord <: EqLtLe' <: StrOrder.
     Variable A: Type.
 
     #[export]
-    Instance ssup_covariance:
-      Proper (pointwise_relation A le ++> le) ssup.
+    Instance ssup_covariance: Proper (pointwise_relation A le ++> le) ssup.
     Proof. firstorder. Qed.
 
     #[export]
-    Instance ssup_compat:
-      Proper (pointwise_relation A eq ==> eq) ssup.
-    Proof. firstorder. Qed.
+    Instance ssup_compat: Proper (pointwise_relation A eq ==> eq) ssup := _.
 
     Property ssup_gt (x: A → Ord): ∀ a, x a < ssup x.
     Proof.
@@ -271,13 +285,13 @@ Module Ord <: EqLtLe' <: StrOrder.
     Qed.
 
     Theorem source_irrelevance (o: Ord):
-    ∀ A (f: A → Ord), ssup f == o → Q f → P o.
+      ∀ A (f: A → Ord), ssup f == o → Q f → P o.
     Proof.
       intros A f Eq. now rewrite <- Eq.
     Qed.
 
     Theorem source_irrelevance_inv (o: Ord):
-    P o → ∀ A (f: A → Ord), ssup f == o → Q f.
+      P o → ∀ A (f: A → Ord), ssup f == o → Q f.
     Proof.
       intros H A f Eq. now rewrite <- Eq in H.
     Qed.
@@ -358,10 +372,7 @@ Module Ord <: EqLtLe' <: StrOrder.
     Qed.
 
     #[export]
-    Instance succ_compat: Proper (eq ==> eq) succ.
-    Proof.
-      unfold succ; solve_proper.
-    Qed.
+    Instance succ_compat: Proper (eq ==> eq) succ := _.
 
     Property succ_gt o: o < succ o.
     Proof.
@@ -701,15 +712,12 @@ Module Ord <: EqLtLe' <: StrOrder.
     End Def.
 
     #[export]
-    Instance sup_covariance {A}: Proper (pointwise_relation A le ++> le) sup.
+    Instance sup_covariance {A}: Proper (pointwise_relation A le ==> le) sup.
     Proof λ x y H,
           sup_minimality x (sup y) (transitivity H (sup_ge y)).
 
     #[export]
-    Instance sup_compat {A}: Proper (pointwise_relation A eq ==> eq) sup.
-    Proof.
-      split; now apply sup_covariance, pointwise_eq_sub_le.
-    Qed.
+    Instance sup_compat {A}: Proper (pointwise_relation A eq ==> eq) sup := _.
 
     Remark no_sup_strict_covariance: ¬∀ A, Proper (pointwise_relation A lt ==> lt) sup.
     Proof.
@@ -777,6 +785,7 @@ Module Ord <: EqLtLe' <: StrOrder.
   Section Pairwise_Maximum.
 
     Definition max (x y: Ord): Ord := ssup (sum_rect _ (src_map x) (src_map y)).
+    Local Notation "[ f , g ]" := (sum_rect _ f g).
 
     Property max_ge x y: x ≤ max x y ∧ y ≤ max x y.
     Proof.
@@ -824,16 +833,7 @@ Module Ord <: EqLtLe' <: StrOrder.
     Qed.
 
     #[export]
-    Instance max_compat: Proper (eq ==> eq ==> eq) max.
-    Proof.
-      do 2 destruct 1; split; now apply max_covariance.
-    Qed.
-
-    #[export]
-    Instance max_strict_covariance: Proper (lt ++> lt ++> lt) max.
-    Proof.
-      intros x y lt.
-    Abort.
+    Instance max_compat: Proper (eq ==> eq ==> eq) max := _.
 
     Property max_idempotence x: max x x == x.
     Proof.
@@ -889,6 +889,30 @@ Module Ord <: EqLtLe' <: StrOrder.
       exists (a, b). now_show (z c ≤ min (x a) (y b)).
       now apply min_maximality.
     Qed.
+
+    Corollary min_uniqueness x y: ∀ m,
+      m ≤ x → m ≤ y → (∀ z, z ≤ x → z ≤ y → z ≤ m) → min x y == m.
+    Proof.
+      split.
+      - apply H1; apply min_le.
+      - apply min_maximality; assumption.
+    Qed.
+  
+    #[export]
+    Instance min_covariance: Proper (le ++> le ++> le) min.
+    Proof.
+      intros [A f] [B g] Le [A' f'] [B' g'] Le'. simpl.
+      intros (a, a').
+      specialize (Le a) as (b, Le); fold le in Le.
+      specialize (Le' a') as (b', Le'); fold le in Le'.
+      exists (b, b'); cbn in *.
+      apply min_maximality.
+      1: rewrite <- Le. 2: rewrite <- Le'.
+      apply min_le.
+    Qed.
+
+    #[export]
+    Instance min_compat: Proper (eq ==> eq ==> eq) min := _.
   
   End Pairwise_Minimum.
 
