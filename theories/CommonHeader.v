@@ -81,7 +81,6 @@ Arguments all_ex [_ _ _ _] _ _.
 Arguments ex_all [_ _ _ _] _ _.
 Arguments all_all [_ _ _ _] _ _.
 Arguments ex_ex [_ _ _ _] _ _.
-Print Implicit all_ex.
 
     
 Lemma empty_notT A: ¬inhabited A → notT A.
