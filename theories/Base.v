@@ -28,19 +28,20 @@ Require Import Arith_base.
 
 Generalizable Variables A B C I J K R X Y Z eqA.
 
+Open Scope Ord_scope.
+
 
 (** An ordinal is represented by the image of a (possibly empty) function
     with codomain the ordinals. Conceptually it 'is' the least ordinal
     greater than every element of the function's range. *)
 
-Inductive Ord := ssup `(x: A → Ord).
+Inductive Ord := Ord_ssup `(x: A → Ord).
 Bind Scope Ord_scope with Ord.
 
 Module Ord <: EqLtLe' <: StrOrder.
 
-  Open Scope Ord_scope.
-
   Definition t := Ord.
+  Notation ssup := Ord_ssup.
 
   Definition src (o: Ord) := let (A, _) := o in A.
   
@@ -59,24 +60,24 @@ Module Ord <: EqLtLe' <: StrOrder.
 
   #[export] Hint Unfold ge gt relation_conjunction flip: core.
 
-  #[global] Infix "≤" := le: Ord_scope.
-  #[global] Infix "≥" := ge: Ord_scope.
-  #[global] Infix "<" := lt: Ord_scope.
-  #[global] Infix ">" := gt: Ord_scope.
-  #[global] Infix "==" := eq: Ord_scope.
-  #[global] Notation "x =/= y" := (not (eq x y)): Ord_scope.
+  Infix "≥" := ge.
+  Infix "≤" := le.
+  Infix "<" := lt.
+  Infix ">" := gt.
+  Infix "==" := eq.
+  Notation "x =/= y" := (not (eq x y)).
 
-  #[global] Notation "x == y == z" := (x == y ∧ y == z): Ord_scope.
-  #[global] Notation "x < y < z" := (x < y ∧ y < z): Ord_scope.
-  #[global] Notation "x ≤ y ≤ z" := (x ≤ y ∧ y ≤ z): Ord_scope.
-  #[global] Notation "x ≤ y < z" := (x ≤ y ∧ y < z): Ord_scope.
-  #[global] Notation "x < y ≤ z" := (x < y ∧ y ≤ z): Ord_scope.
-  #[global] Notation "x < y == z" := (x ≤ y ∧ y == z): Ord_scope.
-  #[global] Notation "x == y < z" := (x == y ∧ y < z): Ord_scope.
-  #[global] Notation "x < y == z" := (x < y ∧ y == z): Ord_scope.
-  #[global] Notation "x == y < z" := (x == y ∧ y < z): Ord_scope.
-  #[global] Notation "x ≤ y == z" := (x ≤ y ∧ y == z): Ord_scope.
-  #[global] Notation "x == y ≤ z" := (x == y ∧ y ≤ z): Ord_scope.
+  Notation "x == y == z" := (x == y ∧ y == z).
+  Notation "x < y < z" := (x < y ∧ y < z).
+  Notation "x ≤ y ≤ z" := (x ≤ y ∧ y ≤ z).
+  Notation "x ≤ y < z" := (x ≤ y ∧ y < z).
+  Notation "x < y ≤ z" := (x < y ∧ y ≤ z).
+  Notation "x < y == z" := (x ≤ y ∧ y == z).
+  Notation "x == y < z" := (x == y ∧ y < z).
+  Notation "x < y == z" := (x < y ∧ y == z).
+  Notation "x == y < z" := (x == y ∧ y < z).
+  Notation "x ≤ y == z" := (x ≤ y ∧ y == z).
+  Notation "x == y ≤ z" := (x == y ∧ y ≤ z).
 
   
   Section Reduction_Lemmata.
@@ -566,7 +567,11 @@ Module Ord <: EqLtLe' <: StrOrder.
     just use from_wf, but we instead define a simpler function and then
     show that it is equivalent. *)
 
-    Definition from_nat (n: nat): Ord := Nat.iter n succ zero.
+    Fixpoint from_nat (n: nat): Ord :=
+      match n with
+      | 0 => zero
+      | S n' => succ (from_nat n')
+      end.
 
     Local Lemma from_wf_nat_covariance:
       Proper (Peano.le ==> le) (from_wf (R := Peano.lt)).
@@ -577,31 +582,19 @@ Module Ord <: EqLtLe' <: StrOrder.
       - destruct e. reflexivity.
     Qed.
 
-    Lemma from_wf_0: from_wf 0 == zero.
-    Proof.
-      rewrite -> from_wf_eq.
-      apply ssup_empty_is_zero. intros [[x lt]].
-      inversion lt.
-    Qed.
-
-    Lemma from_wf_S (n: nat): from_wf (S n) == succ (from_wf n).
-    Proof.
-      unfold succ. rewrite -> from_wf_eq. simpl.
-      apply eq_le.
-      - intros [m l]. exists tt. simpl.
-        apply from_wf_nat_covariance; auto with arith.
-      - intro. assert (l: (n < S n)%nat) by auto.
-        now exists (exist _ n l).
-    Qed.
-
     Proposition from_wf_is_from_nat:
       pointwise_relation _ eq (from_wf (R := Peano.lt)) from_nat.
     Proof.
       intro n; induction n.
-      - apply from_wf_0.
-      - simpl. rewrite <- IHn. apply from_wf_S.
+      cbn [from_nat]. rewrite -> from_wf_eq.
+      - apply ssup_empty_is_zero. firstorder with arith.
+      - rewrite <- IHn; clear IHn. split.
+        + simpl. intros [m l]; exists tt.
+          apply from_wf_nat_covariance; auto with arith.
+        + intro. assert (l: (n < S n)%nat) by auto.
+          now exists (exist _ n l).
     Qed.
-
+    (*
     Lemma from_nat_src (n: nat): (0 < n)%nat → unit = src (from_nat n) :> Type.
     Proof.
       intro H. rewrite <- (Nat.succ_pred_pos _ H). reflexivity.
@@ -610,7 +603,7 @@ Module Ord <: EqLtLe' <: StrOrder.
     Lemma from_nat_src_0 (n: nat): ∅ = src (from_nat 0) :> Type.
     Proof.
       reflexivity.
-    Qed.
+    Qed.*)
 
     #[export]
     Instance from_nat_compat: Proper (Logic.eq ==> eq) from_nat := _.
@@ -867,9 +860,43 @@ Module Ord <: EqLtLe' <: StrOrder.
 
 End Ord.
 
+Bind Scope Ord_scope with Ord Ord.t.
+
+(** Re-export most instances *)
+
+#[export] Existing Instance Ord.setoid.
+#[export] Existing Instance Ord.le_preorder.
+#[export] Existing Instance Ord.le_partial_order.
+#[export] Existing Instance Ord.lt_strorder.
+#[export] Existing Instance Ord.lt_wo.
+
 #[export] Instance Ord_lt_rewrite: RewriteRelation Ord.lt := {}.
 #[export] Instance Ord_le_rewrite: RewriteRelation Ord.le := {}.
 #[export] Instance Ord_eq_rewrite: RewriteRelation Ord.eq := {}.
 
-#[global] Coercion Ord.from_nat: nat >-> Ord.
+(** Make notations generally available even if Ord module not imported *)
+#[global] Infix "≤" := le: Ord_scope.
+#[global] Infix "<=" := le (only parsing): Ord_scope.
+#[global] Infix "≥" := ge: Ord_scope.
+#[global] Infix ">=" := ge (only parsing): Ord_scope.
+#[global] Infix "<" := lt: Ord_scope.
+#[global] Infix ">" := gt: Ord_scope.
+#[global] Infix "==" := eq: Ord_scope.
+#[global] Notation "x =/= y" := (not (eq x y)): Ord_scope.
+#[global] Notation "x == y == z" := (x == y ∧ y == z): Ord_scope.
+#[global] Notation "x < y < z" := (x < y ∧ y < z): Ord_scope.
+#[global] Notation "x ≤ y ≤ z" := (x ≤ y ∧ y ≤ z): Ord_scope.
+#[global] Notation "x ≤ y < z" := (x ≤ y ∧ y < z): Ord_scope.
+#[global] Notation "x < y ≤ z" := (x < y ∧ y ≤ z): Ord_scope.
+#[global] Notation "x < y == z" := (x ≤ y ∧ y == z): Ord_scope.
+#[global] Notation "x == y < z" := (x == y ∧ y < z): Ord_scope.
+#[global] Notation "x < y == z" := (x < y ∧ y == z): Ord_scope.
+#[global] Notation "x == y < z" := (x == y ∧ y < z): Ord_scope.
+#[global] Notation "x ≤ y == z" := (x ≤ y ∧ y == z): Ord_scope.
+#[global] Notation "x == y ≤ z" := (x == y ∧ y ≤ z): Ord_scope.
 
+#[global] Notation "0" := Ord.zero: Ord_scope.
+#[global] Notation "1" := (Ord.succ (Ord.zero)): Ord_scope.
+#[global] Notation "'S'" := Ord.succ: Ord_scope.
+
+#[global] Coercion Ord.from_nat: nat >-> Ord.
