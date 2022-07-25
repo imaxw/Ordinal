@@ -870,3 +870,6 @@ End Ord.
 #[export] Instance Ord_lt_rewrite: RewriteRelation Ord.lt := {}.
 #[export] Instance Ord_le_rewrite: RewriteRelation Ord.le := {}.
 #[export] Instance Ord_eq_rewrite: RewriteRelation Ord.eq := {}.
+
+#[global] Coercion Ord.from_nat: nat >-> Ord.
+
