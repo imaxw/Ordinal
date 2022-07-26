@@ -1,17 +1,12 @@
-From Coq Require Import Logic.StrictProp.
+From Coq Require Import StrictProp.
 
 (** Libraries that are used in multiple other files *)
 From Coq Require Export
-  Structures.Equalities
-  Structures.Orders
-  Classes.RelationClasses
-  Classes.Morphisms
-  Classes.Equivalence
-  Classes.SetoidClass
-  Setoids.Setoid
-  Program.Basics
-  Program.Combinators
-  Unicode.Utf8.
+  Equalities Orders
+  RelationClasses Morphisms Equivalence SetoidClass
+  Setoid
+  Program.Basics Program.Combinators
+  Utf8.
 
 Generalizable All Variables.
 
@@ -55,6 +50,42 @@ where "A ^ n" := (iter_prod A n): type_scope.
 Definition dcompose `(f: ∀ x: A, B x → C) (g: ∀ x :A, B x) := 
   λ x, f x (g x).
 Infix "•" := dcompose (at level 40, left associativity): type_scope.
+
+
+Section DeMorganLaws.
+
+  (* Re-proving the three intuitionisitcally valid DeMorgan's laws to avoid 
+   * importing classical axioms from the standard library.
+   *)
+
+  Definition all_not_not_ex `(P: U -> Prop) : (forall x, not (P x)) -> not (exists x, P x)
+  := fun an e => let (x, p) := e in an x p.
+
+  Definition not_ex_all_not `(P: U -> Prop) : not (exists x, P x) -> forall x, not (P x)
+  := fun ne x p => ne (ex_intro x p).
+
+  Definition ex_not_not_all `(P: U → Prop) : (exists x, not (P x)) → not (forall x, P x)
+  := fun en a => let (x, np) := en in np (a x).
+
+  Definition all_not_not_sig `(P: U -> Prop) : (forall x, not (P x)) -> notT {x | P x}
+  := fun an s => let (x, p) := s in an x p.
+
+  Definition not_sig_all_not `(P: U -> Prop) : notT {x | P x} -> forall x, not (P x)
+  := fun ns x p => ns (exist _ x p).
+
+  Definition sig_not_not_all `(P: U -> Prop): {x | not (P x)} -> not (forall x, P x)
+  := fun sn a => let (x, np) := sn in np (a x).
+
+  Definition all_not_not_sigT `(P: U -> Type): (forall x, notT (P x)) ->  notT {x & P x}
+  := fun an s => let (x, p) := s in an x p.
+
+  Definition not_sigT_all_not `(P: U -> Type) : notT {x & P x} -> forall x, notT (P x)
+  := fun ns x p => ns (existT _ x p).
+
+  Definition sigT_not_not_all `(P: U -> Type): {x & notT (P x)} -> notT (forall x, P x)
+  := fun sn a => let (x, np) := sn in np (a x).
+
+End DeMorganLaws.
   
 
 Section Double_Quantifier_Projections.
@@ -81,7 +112,6 @@ Arguments all_ex [_ _ _ _] _ _.
 Arguments ex_all [_ _ _ _] _ _.
 Arguments all_all [_ _ _ _] _ _.
 Arguments ex_ex [_ _ _ _] _ _.
-Print Implicit all_ex.
 
     
 Lemma empty_notT A: ¬inhabited A → notT A.
