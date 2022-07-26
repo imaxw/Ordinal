@@ -2,7 +2,7 @@ Require Import Relations Morphisms Setoid.
 
 Local Open Scope signature_scope.
 
-Generalizable Variables A P R equal.
+Generalizable Variables A E P R equal.
 
 Set Implicit Arguments.
 
@@ -108,8 +108,7 @@ Section Strong_Extensionality.
       (forall b, b < y -> exists2 a, a < x & E a b).
     
   Class Extensional: Prop :=
-    extensionality: forall (E: relation A) (bisim: Bisimulation E),
-      subrelation E equal.
+    extensionality: forall `(Bisimulation E), subrelation E equal.
 
   Let bisimilar x y := forall t, t < x <-> t < y.
   Local Infix "~" := bisimilar (at level 70).
@@ -149,6 +148,7 @@ Section Strong_Extensionality.
 
 End Strong_Extensionality.
 
+Arguments Bisimulation {_} _ _.
 Arguments Extensional {_} _ _.
 
 
