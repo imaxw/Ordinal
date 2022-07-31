@@ -64,15 +64,6 @@ Section Finiteness.
     - exists n. rewrite <- EQ; assumption.
   Defined.
 
-  Lemma Finite_ind `(Proper _ (Ord.eq ==> iff) P):
-      P zero → (∀ w, P w → P (succ w)) →  ∀ `(Finite w), P w.
-  Proof.
-    intros H0 IH w F. induction F.
-    - exact H0.
-    - exact (IH w IHF).
-    - rewrite <- e; exact IHF.
-  Qed.
-
   Theorem ω_not_finite: notT (Finite (ssup from_nat)).
   Proof.
     intro H; apply to_nat in H. destruct H as [n [H _]].
