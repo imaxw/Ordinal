@@ -37,8 +37,6 @@ Inductive Ord := ssup `(x: A → Ord).
 
 Module Ord <: EqLtLe' <: StrOrder.
 
-  Local Open Scope Ord_scope.
-
   Definition t := Ord.
 
   Definition src (o: Ord) := let (A, _) := o in A.
@@ -59,24 +57,9 @@ Module Ord <: EqLtLe' <: StrOrder.
   #[export] Hint Unfold ge gt relation_conjunction flip: core.
 
   Include EqLtLeNotation.
-
   Infix "≤" := le.
   Infix "≥" := ge.
-  Infix "<" := lt.
-  Infix ">" := gt.
-  Infix "==" := eq.
-  Notation "x =/= y" := (not (eq x y)).
-
-  Notation "x == y == z" := (x == y ∧ y == z).
-  Notation "x < y < z" := (x < y ∧ y < z).
-  Notation "x ≤ y ≤ z" := (x ≤ y ∧ y ≤ z).
-  Notation "x ≤ y < z" := (x ≤ y ∧ y < z).
-  Notation "x < y ≤ z" := (x < y ∧ y ≤ z).
-  Notation "x < y == z" := (x ≤ y ∧ y == z).
-  Notation "x == y < z" := (x == y ∧ y < z).
-  Notation "x ≤ y == z" := (x ≤ y ∧ y == z).
-  Notation "x == y ≤ z" := (x == y ∧ y ≤ z).
-
+  Notation "x =/= y" := (x ~= y).
   
   Section Reduction_Lemmata.
 
@@ -333,7 +316,7 @@ Module Ord <: EqLtLe' <: StrOrder.
       - auto.
     Qed.
 
-    Property ssup_nonempty_is_nonzero w: ¬¬inhabited (src w) ↔ w =/= zero.
+    Property ssup_nonempty_is_nonzero w: ¬¬inhabited (src w) ↔ w ~= zero.
     Proof.
       split. intros H H'.
       apply (ssup_empty_is_zero w) in H'.
@@ -413,9 +396,7 @@ Module Ord <: EqLtLe' <: StrOrder.
   
   End Successor.
 
-  #[export] Hint Resolve succ_gt: ord.
   #[export] Hint Resolve -> succ_minimality: ord.
-  #[export] Hint Resolve -> le_iff_lt_succ: ord.
   #[export] Hint Rewrite <- succ_gt: ord.
   #[export] Hint Rewrite <- succ_minimality: ord.
 
@@ -643,7 +624,7 @@ Module Ord <: EqLtLe' <: StrOrder.
         apply IH. auto with arith.
     Qed.
     
-    Property from_nat_le_inv m n: (from_nat m ≤ from_nat n)%nat → m <= n.
+    Property from_nat_le_inv m n: from_nat m ≤ from_nat n → (m <= n)%nat.
     Proof.
       induction m, n as [n | m | m n IH] using nat_double_ind.
       simpl; intro H; repeat elim_quantifiers.
@@ -665,6 +646,8 @@ Module Ord <: EqLtLe' <: StrOrder.
         take the strict supremum of the corresponding join of their
         source maps.
         *)
+
+    Open Scope equiv_scope.
 
     Section Def.
 
@@ -717,27 +700,6 @@ Module Ord <: EqLtLe' <: StrOrder.
     #[export]
     Instance sup_compat {A}: Proper (pointwise_relation A eq ==> eq) sup := _.
 
-    Remark no_sup_strict_covariance: ¬∀ A, Proper (pointwise_relation A lt ==> lt) sup.
-    Proof.
-      unfold Proper, respectful; intro H.
-      pose (x := from_nat); pose (y := from_nat ∘ S).
-      specialize (H nat x y).
-      assert (H1: pointwise_relation _ lt x y). { 
-        unfold x, y, compose; simpl. auto with ord.
-      }
-      assert (H2: sup x == sup y). {
-        split.
-        - apply sup_covariance, pointwise_lt_sub_le, H1.
-        - intros [n []].
-          exists (existT (λ m, src (x m)) (S n) tt).
-          simpl. reflexivity.
-          unfold nat_rect.
-      }
-      specialize (H H1) as [[m []] H].
-      specialize (H (existT (λ a, src (x a)) (S m) tt)).
-      exact (irreflexivity H).
-    Qed.
-
     Property sup_le_ssup [A]: pointwise_relation _ le (@sup A) (@ssup A).
     Proof.
       intro x. apply sup_minimality, ssup_ge.
@@ -756,7 +718,7 @@ Module Ord <: EqLtLe' <: StrOrder.
       + split.
         - apply le_lt; trivial.
         - cbn. intro a; exists tt; apply sup_ge.
-      + intro H; rewrite <- H; auto with ord.
+      + intro H; rewrite <- H; apply succ_gt.
     Qed.
 
     Proposition sup_empty_is_zero [A] (x: A → Ord): ¬inhabited A → sup x == zero.
