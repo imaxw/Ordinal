@@ -58,6 +58,8 @@ Module Ord <: EqLtLe' <: StrOrder.
 
   #[export] Hint Unfold ge gt relation_conjunction flip: core.
 
+  Include EqLtLeNotation.
+
   Infix "≤" := le.
   Infix "≥" := ge.
   Infix "<" := lt.
@@ -83,7 +85,7 @@ Module Ord <: EqLtLe' <: StrOrder.
     Proof. reflexivity. Qed.
 
     Lemma lt_lt `(x: A → Ord) `(y: B → Ord):
-      (∀ a, ∃ b, x a ≤ y b) ↔ ssup x ≤ ssup y.
+      (∃ b, ∀ a, x a < y b) ↔ ssup x < ssup y.
     Proof. reflexivity. Qed.
 
     Fixpoint le_lt (o: Ord): ∀ [A] (x: A → Ord), (∀ a, x a < o) ↔ ssup x ≤ o.
