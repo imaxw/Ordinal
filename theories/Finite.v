@@ -35,7 +35,7 @@ Section Finiteness.
     Hypothesis f0: f Nat.zero == Ord.zero.
     Hypothesis fS: forall n, f (Nat.succ n) == Ord.succ (f n).
 
-    Theorem from_nat_uniqueness: f == from_nat.
+    Theorem from_nat_uniqueness: f === from_nat.
     Proof.
       intro n; now_show (f n == from_nat n).
       induction n.

@@ -7,11 +7,10 @@ From Coq Require Export
   Classes.RelationClasses
   Classes.Morphisms
   Classes.Equivalence
-  Classes.SetoidClass
   Setoids.Setoid
   Program.Basics
   Program.Combinators
-  Unicode.Utf8.
+  Unicode.Utf8_core.
 
 Generalizable All Variables.
 
@@ -21,9 +20,6 @@ Generalizable All Variables.
 
 Arguments ex_intro [_ _] _ _.
 Arguments ex_intro2 [_ _ _] _ _ _.
-
-#[export] Instance pointwise_setoid `(Setoid A) (domain: Type):
-  Setoid (domain → A) := Build_Setoid _.
 
 (** Some convenience notations *)
 Notation "⊤" := True : type_scope.

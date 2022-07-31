@@ -58,24 +58,22 @@ Module Ord <: EqLtLe' <: StrOrder.
 
   #[export] Hint Unfold ge gt relation_conjunction flip: core.
 
-  #[global] Infix "≤" := le: Ord_scope.
-  #[global] Infix "≥" := ge: Ord_scope.
-  #[global] Infix "<" := lt: Ord_scope.
-  #[global] Infix ">" := gt: Ord_scope.
-  #[global] Infix "==" := eq: Ord_scope.
-  #[global] Notation "x =/= y" := (not (eq x y)): Ord_scope.
+  Infix "≤" := le.
+  Infix "≥" := ge.
+  Infix "<" := lt.
+  Infix ">" := gt.
+  Infix "==" := eq.
+  Notation "x =/= y" := (not (eq x y)).
 
-  #[global] Notation "x == y == z" := (x == y ∧ y == z): Ord_scope.
-  #[global] Notation "x < y < z" := (x < y ∧ y < z): Ord_scope.
-  #[global] Notation "x ≤ y ≤ z" := (x ≤ y ∧ y ≤ z): Ord_scope.
-  #[global] Notation "x ≤ y < z" := (x ≤ y ∧ y < z): Ord_scope.
-  #[global] Notation "x < y ≤ z" := (x < y ∧ y ≤ z): Ord_scope.
-  #[global] Notation "x < y == z" := (x ≤ y ∧ y == z): Ord_scope.
-  #[global] Notation "x == y < z" := (x == y ∧ y < z): Ord_scope.
-  #[global] Notation "x < y == z" := (x < y ∧ y == z): Ord_scope.
-  #[global] Notation "x == y < z" := (x == y ∧ y < z): Ord_scope.
-  #[global] Notation "x ≤ y == z" := (x ≤ y ∧ y == z): Ord_scope.
-  #[global] Notation "x == y ≤ z" := (x == y ∧ y ≤ z): Ord_scope.
+  Notation "x == y == z" := (x == y ∧ y == z).
+  Notation "x < y < z" := (x < y ∧ y < z).
+  Notation "x ≤ y ≤ z" := (x ≤ y ∧ y ≤ z).
+  Notation "x ≤ y < z" := (x ≤ y ∧ y < z).
+  Notation "x < y ≤ z" := (x < y ∧ y ≤ z).
+  Notation "x < y == z" := (x ≤ y ∧ y == z).
+  Notation "x == y < z" := (x == y ∧ y < z).
+  Notation "x ≤ y == z" := (x ≤ y ∧ y == z).
+  Notation "x == y ≤ z" := (x == y ∧ y ≤ z).
 
   
   Section Reduction_Lemmata.
@@ -206,8 +204,6 @@ Module Ord <: EqLtLe' <: StrOrder.
     Qed.
 
     #[export] Instance lt_wo: WellOrder eq lt := { }.
-
-    #[export] Instance setoid: Setoid Ord := { }.
 
     #[export] Instance pointwise_eq_sub_le [A]:
     subrelation (pointwise_relation A eq) (pointwise_relation A le) := _.
@@ -919,6 +915,23 @@ Module Ord <: EqLtLe' <: StrOrder.
 End Ord.
 
 #[global] Bind Scope Ord_scope with Ord Ord.t.
+
+#[global] Infix "≤" := Ord.le: Ord_scope.
+#[global] Infix "≥" := Ord.ge: Ord_scope.
+#[global] Infix "<" := Ord.lt: Ord_scope.
+#[global] Infix ">" := Ord.gt: Ord_scope.
+#[global] Infix "==" := Ord.eq: Ord_scope.
+#[global] Notation "x =/= y" := (not (Ord.eq x y)): Ord_scope.
+
+#[global] Notation "x == y == z" := (and (Ord.eq x y) (Ord.eq y z)): Ord_scope.
+#[global] Notation "x < y < z" := (and (Ord.lt x y) (Ord.lt y z)): Ord_scope.
+#[global] Notation "x ≤ y ≤ z" := (and (Ord.le x y) (Ord.le y z)): Ord_scope.
+#[global] Notation "x ≤ y < z" := (and (Ord.le x y) (Ord.lt y z)): Ord_scope.
+#[global] Notation "x < y ≤ z" := (and (Ord.lt x y) (Ord.le y z)): Ord_scope.
+#[global] Notation "x < y == z" := (and (Ord.lt x y) (Ord.eq y z)): Ord_scope.
+#[global] Notation "x == y < z" := (and (Ord.eq x y) (Ord.lt y z)): Ord_scope.
+#[global] Notation "x ≤ y == z" := (and (Ord.le x y) (Ord.eq y z)): Ord_scope.
+#[global] Notation "x == y ≤ z" := (and (Ord.eq x y) (Ord.le y z)): Ord_scope.
 
 #[export] Instance Ord_eq_rewrite: RewriteRelation Ord.eq | 0 := {}.
 #[export] Instance Ord_lt_rewrite: RewriteRelation Ord.lt | 1 := {}.
