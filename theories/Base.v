@@ -36,7 +36,6 @@ Open Scope Ord_scope.
     greater than every element of the function's range. *)
 
 Inductive Ord := Ord_ssup `(x: A → Ord).
-Bind Scope Ord_scope with Ord.
 
 Module Ord <: EqLtLe' <: StrOrder.
 

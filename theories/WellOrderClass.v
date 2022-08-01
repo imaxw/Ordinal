@@ -181,16 +181,7 @@ Section Simulation.
   Lemma Simulation_unique `(simf : Simulation f) `(simg : Simulation g) :
   pointwise_relation _ eqB f g.
   Proof.
-    intro x.
-    induction x as [x IH] using well_founded_ind.
-    destruct simf as [pf hf]; destruct simg as [pg hg].
-    - intro Ltfx.
-      destruct simf as [pf hf].
-      specialize (hf t x Ltfx) as [y Lyx Etfy].
-      specialize (IH y Lyx t). rewrite <- IH.
-      destruct simg as [pg hg].
-      specialize (hg t y).
-  Qed.
+  Abort.
 
 
 
