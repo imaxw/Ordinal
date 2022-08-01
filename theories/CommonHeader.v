@@ -2,11 +2,15 @@ From Coq Require Import StrictProp.
 
 (** Libraries that are used in multiple other files *)
 From Coq Require Export
-  Equalities Orders
-  RelationClasses Morphisms Equivalence SetoidClass
-  Setoid
-  Program.Basics Program.Combinators
-  Utf8.
+  Structures.Equalities
+  Structures.Orders
+  Classes.RelationClasses
+  Classes.Morphisms
+  Classes.Equivalence
+  Setoids.Setoid
+  Program.Basics
+  Program.Combinators
+  Unicode.Utf8_core.
 
 Generalizable All Variables.
 
@@ -16,9 +20,6 @@ Generalizable All Variables.
 
 Arguments ex_intro [_ _] _ _.
 Arguments ex_intro2 [_ _ _] _ _ _.
-
-#[export] Instance pointwise_setoid `(Setoid A) (domain: Type):
-  Setoid (domain → A) := Build_Setoid _.
 
 (** Some convenience notations *)
 Notation "⊤" := True : type_scope.

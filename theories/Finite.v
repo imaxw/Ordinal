@@ -10,15 +10,18 @@ Section Finiteness.
 
   (* This is in Type instead of Prop because we want to eliminate it
      to extract a witness *)
-  Inductive Finite: t → Type :=
+  Inductive Finite: Ord → Type :=
   | finite_zero: Finite zero
   | finite_succ w: Finite w → Finite (succ w)
   | finite_eq w w': w == w' → Finite w → Finite w'.
 
+  Existing Class Finite.
+  Existing Instance finite_zero.
+  Existing Instance finite_succ.
+  Existing Instance finite_eq.
+
   (* Uninformative variant, if you really want it *)
   Variant Is_Finite: Ord → Prop := finite_witness w: Finite w → Is_Finite w.
-
-  Existing Class Finite.
 
   #[export] Instance finite_proper: Proper (eq ==> iff) Is_Finite.
   Proof.
@@ -32,7 +35,7 @@ Section Finiteness.
     Hypothesis f0: f Nat.zero == Ord.zero.
     Hypothesis fS: forall n, f (Nat.succ n) == Ord.succ (f n).
 
-    Theorem from_nat_uniqueness: f == from_nat.
+    Theorem from_nat_uniqueness: f === from_nat.
     Proof.
       intro n; now_show (f n == from_nat n).
       induction n.
@@ -60,15 +63,6 @@ Section Finiteness.
     - exists (Nat.succ n). apply succ_compat, IH.
     - exists n. rewrite <- EQ; assumption.
   Defined.
-
-  Lemma Finite_ind `(Proper _ (Ord.eq ==> iff) P):
-      P zero → (∀ w, P w → P (succ w)) →  ∀ `(Finite w), P w.
-  Proof.
-    intros H0 IH w F. induction F.
-    - exact H0.
-    - exact (IH w IHF).
-    - rewrite <- e; exact IHF.
-  Qed.
 
   Theorem ω_not_finite: notT (Finite (ssup from_nat)).
   Proof.
