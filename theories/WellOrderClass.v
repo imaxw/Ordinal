@@ -2,7 +2,7 @@ Require Import Relations Morphisms Setoid.
 
 Local Open Scope signature_scope.
 
-Generalizable Variables A E P R equal.
+Generalizable All Variables.
 
 Set Implicit Arguments.
 
@@ -150,6 +150,51 @@ End Strong_Extensionality.
 
 Arguments Bisimulation {_} _ _.
 Arguments Extensional {_} _ _.
+
+
+Section Simulation.
+
+  Context `{woA: WellOrder A eqA ltA}.
+  Context `{woB: WellOrder B eqB ltB}.
+
+  Class Simulation (f: A -> B) : Prop :=
+  {
+    Simulation_proper :> Proper (ltA ==> ltB) f;
+    Simulation_lt_to_eq : forall t x, ltB t (f x) -> exists2 y, ltA y x & eqB t (f y)
+  }.
+
+  (*Lemma Simulation_Bisimulation `(Simulation f): Bisimulation ltA (fun a a' => eqB (f a) (f a')).
+  Proof.
+    destruct H as [pf hf].
+    intros a a' Eq1.
+    split.
+    revert a' Eq1.
+    induction a as [a IH] using well_founded_ind.
+    - intros a' Eq1 x Lt1.
+      specialize (hf (f x) a (pf _ _ Lt1)).
+      destruct hf as [y Lt2 Eq2].
+      specialize (IH x Lt1 y Eq2).
+      exists y.
+      + 
+  Qed.*)
+
+  Lemma Simulation_unique `(simf : Simulation f) `(simg : Simulation g) :
+  pointwise_relation _ eqB f g.
+  Proof.
+    intro x.
+    induction x as [x IH] using well_founded_ind.
+    destruct simf as [pf hf]; destruct simg as [pg hg].
+    - intro Ltfx.
+      destruct simf as [pf hf].
+      specialize (hf t x Ltfx) as [y Lyx Etfy].
+      specialize (IH y Lyx t). rewrite <- IH.
+      destruct simg as [pg hg].
+      specialize (hg t y).
+  Qed.
+
+
+
+End Simulation.
 
 
 Global Instance nat_wo: WellOrder eq lt.

@@ -239,7 +239,7 @@ Module Ord <: EqLtLe' <: StrOrder.
       apply le_lt; reflexivity.
     Qed.
   
-    Property ssup_minimal (x: A → Ord): ∀ s, (∀ a: A, x a < s) ↔ ssup x ≤ s.
+    Property ssup_minimality (x: A → Ord): ∀ s, (∀ a: A, x a < s) ↔ ssup x ≤ s.
     Proof.
       intro; apply le_lt.
     Qed.
@@ -538,20 +538,14 @@ Module Ord <: EqLtLe' <: StrOrder.
 
     Context {Rtrans: Transitive R}.
 
-    Property from_wf_inv_covariance: ∀ x y, from_wf x < from_wf y → x ≺ y.
+    Local Coercion sig_of_sig2 : sig2 >-> sig.
+
+    Property lt_from_wf (x: Ord) (a: A): x < from_wf a → ∃ a': A, x == from_wf a'.
     Proof.
-      intros x y Lt. induction y as [y IH] using well_founded_ind.
-      rewrite -> (from_wf_eq y) in Lt.
-      apply lt_le in Lt as [[y' r] Le]. cbn in Le.
-      refine (transitivity _ r).
-      specialize (IH y' r).
-      apply IH.
-      (* doesn't seem to quite work... *)
-      change (from_wf x ≤ from_wf y') in Le.
-      now_show (from_wf x < from_wf y').
     Abort.
 
-    Hypothesis Rwext: WeaklyExtensional eqA R.
+
+    Context {Rwext: WeaklyExtensional eqA R}.
 
     Property from_wf_inj: ∀ x y, from_wf x == from_wf y → x ≃ y.
     Proof.
